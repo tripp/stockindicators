@@ -136,7 +136,6 @@ StockIndicatorsLegend.prototype = {
             i,
             val;
             val = dataItem.Date || dataItem.Timestamp;
-                    //return getDateFormat.apply(self, [val, 2, dateFormats, rangeType, false]);
 
             this.dateItem.value.innerHTML = Y.Escape.html(val);
         for(i = 0; i < len; i = i + 1) {
