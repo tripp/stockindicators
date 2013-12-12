@@ -2,7 +2,7 @@
  * Displays a legend when the user interacts with the corresponding chart
  * application.
  *
- * @module charts-stockindicators
+ * @module gallery-charts-stockindicators
  * @class StockIndicatorsLegend
  * @constructor
  */

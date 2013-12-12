@@ -2,7 +2,7 @@
  * Allows for the creation of a visualization based on financial
  * indicators..
  *
- * @module charts-stockindicators
+ * @module gallery-charts-stockindicators
  */
 //patch CartesianSeries destructor bug
 Y.CartesianSeries.prototype.destructor = function() {
@@ -35,6 +35,15 @@ Y.CartesianSeries.prototype.destructor = function() {
     }
 };
 
+/**
+ * Creates an updatable crosshair on the Graph which can be controlled
+ * by mouse and touch events.
+ *
+ * @module gallery-charts-stockindicators
+ * @class Crosshair
+ * @constructor
+ * @param {Object} config Configuration parameters.
+ */
 Y.Crosshair = function() {
     this.initializer.apply(this, arguments);
 };

@@ -2,7 +2,7 @@
  * StockIndicatorsChart is an application that generates a chart or charts based on a key indexed array of data and an
  * array of charts configuration data.
  *
- * @module charts-stockindicators
+ * @module gallery-charts-stockindicators
  * @class StockIndicatorsChart
  * @constructor
  */

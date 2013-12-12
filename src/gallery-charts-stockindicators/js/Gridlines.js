@@ -1,13 +1,12 @@
 /**
  * Gridlines draws gridlines on a Graph.
  *
- * @module charts-stockindicators
+ * @module gallery-charts-stockindicators
  * @class Gridlines
  * @constructor
  * @extends Base
  * @uses Renderer
  * @param {Object} config (optional) Configuration parameters.
- * @submodule charts-base
  */
 Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
     /**
