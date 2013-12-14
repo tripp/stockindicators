@@ -113,7 +113,7 @@ StockIndicatorsChart.ATTRS = {
      *      <dt>y</dt><dd>The y coordinate for the chart in relation to the application.</dd>
      *  </dl>
      *
-     *  @attr chartsData
+     *  @attribute chartsData
      *  @type: Array
      */
     charts: {},
