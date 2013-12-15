@@ -4,6 +4,12 @@
  *
  * @module gallery-charts-stockindicators
  */
+var defaultAxisLabelFormat = {
+    value: null
+};
+
+Y.CategoryAxisBase.labelFormat = defaultAxisLabelFormat;
+Y.CategoryAxis.labelFormat = defaultAxisLabelFormat;
 //patch CartesianSeries destructor bug
 Y.CartesianSeries.prototype.destructor = function() {
     if(this.get("rendered"))

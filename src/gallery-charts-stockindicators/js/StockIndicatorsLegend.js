@@ -30,8 +30,9 @@ StockIndicatorsLegend.prototype = {
                 cfg.y + 'px;' + cfg.x + '0px;height: ' + cfg.height + 'px; width: ' +
                 cfg.width + 'px;" class="l-hbox">'
             );
-            this.dateFunction = cfg.dateFunction;
-            this.dateFormats = cfg.dateFormats;
+            this.dateLabelFunction = cfg.dateLabelFunction;
+            this.dateLabelFormat = cfg.dateLabelFormat;
+            this.dateLabelScope = cfg.dateLabelScope || this;
             cfg.render.getDOMNode().appendChild(this.contentDiv);
 
             len = seriesQueue.length;
@@ -134,10 +135,20 @@ StockIndicatorsLegend.prototype = {
             item,
             items = this.items,
             i,
-            val;
-            val = dataItem.Date || dataItem.Timestamp;
-
-            this.dateItem.value.innerHTML = Y.Escape.html(val);
+            val,
+            dateLabelFunction = this.dateLabelFunction,
+            dateLabelScope = this.dateLabelScope,
+            dateLabelFormat = this.dateLabelFormat,
+            dateLabelArgs;
+        val = dataItem.Date || dataItem.Timestamp;
+        if(dateLabelFunction) {
+            dateLabelArgs = [val];
+            if(dateLabelFormat) {
+                dateLabelArgs.push(dateLabelFormat);
+            }
+            val = dateLabelFunction.apply(dateLabelScope, dateLabelArgs);
+        }
+        this.dateItem.value.innerHTML = Y.Escape.html(val);
         for(i = 0; i < len; i = i + 1) {
             key = queue[i];
             item = items[key];
