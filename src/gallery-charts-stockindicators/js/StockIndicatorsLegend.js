@@ -88,6 +88,11 @@ StockIndicatorsLegend.prototype = {
             this._xy = Y.DOM.getXY(this.contentDiv);
     },
     
+    /**
+     * Removes all elements of the legend.
+     *
+     * @method destroy
+     */
     destroy: function() {
         this._removeChildren(this.list);
         this._removeChildren(this.contentDiv);
