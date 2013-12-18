@@ -8,8 +8,8 @@ var defaultAxisLabelFormat = {
     value: null
 };
 
-Y.CategoryAxisBase.labelFormat = defaultAxisLabelFormat;
-Y.CategoryAxis.labelFormat = defaultAxisLabelFormat;
+Y.CategoryAxisBase.ATTRS.labelFormat = defaultAxisLabelFormat;
+Y.CategoryAxis.ATTRS.labelFormat = defaultAxisLabelFormat;
 //patch CartesianSeries destructor bug
 Y.CartesianSeries.prototype.destructor = function() {
     if(this.get("rendered"))
