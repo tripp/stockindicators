@@ -444,6 +444,20 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         };
     },
 
+   /**
+    * Maps axis class to key.
+    *
+    * @property _axesClassMap
+    * @type AxisBase
+    * @private
+    */
+    _axesClassMap: {
+        numeric: Y.NumericAxis,
+        numericbase: Y.NumericAxisBase,
+        category: Y.CategoryAxis,
+        categorybase: Y.CategoryAxisBase
+    },
+
     /**
      * Add the axes to the chart and returns an object literal with references to the
      * `date` and `numeric` axes.
@@ -460,7 +474,9 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
             numericConfig = config.axes.numeric,
             dateConfig = config.axes.date,
             numericAxis,
-            dateAxis;
+            dateAxis,
+            NumericClass = this._axesClassMap[numericConfig.type],
+            DateClass = this._axesClassMap[dateConfig.type];
         numericConfig.render = cb;
         numericConfig.y = config.y + config.legend.height;
         numericConfig.x = config.width - numericConfig.width;
@@ -468,8 +484,8 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         dateConfig.render = cb;
         dateConfig.y = config.y + config.height - dateConfig.height;
         dateConfig.width = config.width;
-        numericAxis = new Y.NumericAxis(numericConfig);
-        dateAxis = new Y.CategoryAxis(dateConfig);
+        numericAxis = new NumericClass(numericConfig);
+        dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
         bb.setStyle("left", 0 + "px");
         bb.setStyle("top", (config.y + config.height - dateConfig.height) + "px");
