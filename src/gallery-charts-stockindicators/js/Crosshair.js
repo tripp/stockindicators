@@ -190,7 +190,7 @@ Y.Crosshair.prototype = {
      * @method setTarget
      * @param {Number} pageX The x-coordinate to map in which to map the crosshair.
      */
-    setTarget: function(pageX) {
+    setTarget: function(pageX, redraw) {
         var xy = this._xy,
             x = pageX - xy[0],
             y,
@@ -212,7 +212,22 @@ Y.Crosshair.prototype = {
                 }
             }
         }
-        this.graphic._redraw();
+        this.updateFlag = true;
+        if(redraw) {
+            this.graphic._redraw();
+        }
+    },
+
+    /**
+     * Updates the crosshair items.
+     *
+     * @method redraw
+     */
+    redraw: function() {
+        if(this.updateFlag) {
+            this.graphic._redraw();
+            this.updateFlag = false;
+        }
     },
 
     /**

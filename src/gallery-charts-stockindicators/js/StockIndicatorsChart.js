@@ -164,6 +164,7 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
      * @param {Object} e Event payload
      */
     updatesLegendsCrosshair: function(e) {
+        e.preventDefault();
         var crosshair,
             crosshairs = this._crosshairs,
             legends = this._legends,
@@ -181,14 +182,71 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
                 xy = chart.xy,
                 x = pageX - xy[0];
                 crosshair = this._crosshairs[i];
-                crosshair.setTarget(pageX);
+                crosshair.setTarget(pageX, this._autoDraw);
             }
             len = legends.length;
             for(i = 0; i < len; i = i + 1) {
-                legends[i].update(pageX, this._dataProvider);
+                legends[i].update(pageX, this._dataProvider, this._autoDraw);
             }
         }
         this.curX = pageX;
+    },
+
+    /**
+     * Starts a timeline used to manage redraws based on requestAnimationFrame.
+     *
+     * @method startTimeline
+     */
+    startTimeline: function() {
+        if(!this._runTimeline) {
+            this._runTimeline = true;
+            this._timelineStart = (new Date()).valueOf() - 17;
+            this.redraw();
+        }
+    },
+
+    /**
+     * Ends a timeline.
+     *
+     * @method stopTimeline
+     */
+    stopTimeline: function() {
+        var args,
+            timelineId = this._timelineId;
+        this._runTimeline = false;
+        if(timelineId) {
+            args = [timelineId];
+            this._timelineId = null;
+        }
+    },
+
+    /**
+     * Draws chart elements based on the timeline.
+     *
+     * @method redraw
+     */
+    redraw: function() {
+        var scope = this,
+            crosshairs = this._crosshairs,
+            legends = this._legends,
+            i,
+            len = crosshairs.length,
+            endTime = (new Date()).valueOf();
+        if(endTime >= this._timelineStart + 17) {
+            for(i = 0; i < len; i = i + 1) {
+                crosshairs[i].redraw();
+            }
+            len = legends.length;
+            for(i = 0; i < len; i = i + 1) {
+                legends[i].redraw();
+            }
+            this._timelineStart = (new Date()).valueOf();
+        }
+        if(this._runTimeline && !this._autoDraw) {
+            this._timelineId = this._onEnterFrame.apply(window, [function() {
+                scope.redraw();
+            }]);
+        }
     },
 
     /**
@@ -203,6 +261,12 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         this._crosshairs = [];
         this._hotspots = [];
         this._legends = [];
+        this._runTimeline = false;
+        this._onEnterFrame = window.requestAnimationFrame ||
+                            window.mozRequestAnimationFrame ||
+                            window.webkitRequestAnimationFrame ||
+                            window.msRequestAnimationFrame;
+        this._autoDraw = this._onEnterFrame ? false : true;
         StockIndicatorsChart.superclass.initializer.apply(this, arguments);
     },
 
@@ -251,12 +315,18 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
             indLen = indicators.length,
             valueIter,
             valueLen,
-            valueKey;
+            valueKey,
+            groupMarkers;
         for(indIter = 0; indIter < indLen; indIter = indIter + 1) {
             indicator = indicators[indIter];
             valueKey = indicator.valueKey;
-            if(indicator.type === "candlestick" || typeof valueKey === "string") {
+            indicatorType = indicator.type;
+            if(indicatorType === "candlestick" || typeof valueKey === "string") {
+                groupMarkers = indicatorType !== "candlestick" &&
+                                indicatorType !== "line" &&
+                                indicator.groupMarkers;
                 seriesCollection.push({
+                    groupMarkers: groupMarkers,
                     type: indicator.type,
                     xKey: config.categoryKey,
                     yKey: indicator.valueKey
@@ -265,7 +335,9 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
                valueLen = valueKey.length;
                for(valueIter = 0; valueIter < valueLen; valueIter = valueIter + 1) {
                     indicatorType = indicator.type;
+                    groupMarkers = indicatorType !== "line" && indicator.groupMarkers;
                     seriesCollection.push({
+                        groupMarkers: groupMarkers,
                         type: typeof indicatorType === "string" ? indicatorType : indicatorType[valueIter],
                         xKey: config.categoryKey,
                         yKey: indicator.valueKey[valueIter]

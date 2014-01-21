@@ -87,7 +87,7 @@ StockIndicatorsLegend.prototype = {
             this.formatDate = cfg.formatDate;
             this._xy = Y.DOM.getXY(this.contentDiv);
     },
-    
+   
     /**
      * Removes all elements of the legend.
      *
@@ -121,7 +121,7 @@ StockIndicatorsLegend.prototype = {
             }
         }
     },
-    
+   
     /**
      * Updates the legend.
      *
@@ -129,12 +129,24 @@ StockIndicatorsLegend.prototype = {
      * @param {Number} pageX
      * @param {Array} dataProvider
      */
-    update: function(pageX, dataProvider) {
+    update: function(pageX, dataProvider, redraw) {
         var xy = this._xy,
             x = pageX - xy[0],
-            index = Math.floor(x / this.width * dataProvider.length),
-            dataItem = dataProvider[index],
-            queue = this.seriesQueue,
+            index = Math.floor(x / this.width * dataProvider.length);
+        this._dataItem = dataProvider[index];
+        if(redraw) {
+            this.redraw();
+        }
+    },
+
+  
+    /**
+     * Draws the legend.
+     *
+     * @method redraw
+     */
+    redraw: function() {
+        var queue = this.seriesQueue,
             key,
             len = queue.length,
             item,
@@ -144,27 +156,31 @@ StockIndicatorsLegend.prototype = {
             dateLabelFunction = this.dateLabelFunction,
             dateLabelScope = this.dateLabelScope,
             dateLabelFormat = this.dateLabelFormat,
-            dateLabelArgs;
-        val = dataItem.Date || dataItem.Timestamp;
-        if(dateLabelFunction) {
-            dateLabelArgs = [val];
-            if(dateLabelFormat) {
-                dateLabelArgs.push(dateLabelFormat);
+            dateLabelArgs,
+            dataItem = this._dataItem;
+        if(dataItem) {
+            val = dataItem.Date || dataItem.Timestamp;
+            if(dateLabelFunction) {
+                dateLabelArgs = [val];
+                if(dateLabelFormat) {
+                    dateLabelArgs.push(dateLabelFormat);
+                }
+                val = dateLabelFunction.apply(dateLabelScope, dateLabelArgs);
             }
-            val = dateLabelFunction.apply(dateLabelScope, dateLabelArgs);
-        }
-        this.dateItem.value.innerHTML = Y.Escape.html(val);
-        for(i = 0; i < len; i = i + 1) {
-            key = queue[i];
-            item = items[key];
-            if(dataItem.hasOwnProperty(key)) {
-                item.li.style.display = "inline-block";
-                val = dataItem[key];
-                item.value.innerHTML = Y.Number.format(parseFloat(val), this.valueLabelFormat);
-                Y.DOM.setStyle(item.value, "color", val > 0 ? this.priceUpColor : this.priceDownColor);
-            } else {
-                item.li.style.display = "none";
+            this.dateItem.value.innerHTML = Y.Escape.html(val);
+            for(i = 0; i < len; i = i + 1) {
+                key = queue[i];
+                item = items[key];
+                if(dataItem.hasOwnProperty(key)) {
+                    item.li.style.display = "inline-block";
+                    val = dataItem[key];
+                    item.value.innerHTML = Y.Number.format(parseFloat(val), this.valueLabelFormat);
+                    Y.DOM.setStyle(item.value, "color", val > 0 ? this.priceUpColor : this.priceDownColor);
+                } else {
+                    item.li.style.display = "none";
+                }
             }
+            dataItem = this._dataItem = null;
         }
     }
 };
