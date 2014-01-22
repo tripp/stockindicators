@@ -1,10 +1,16 @@
 /**
+ * Provides functionality for a chart.
+ *
+ * @module gallery-charts-stockindicators
+ */
+
+/**
  * StockIndicatorsChart is an application that generates a chart or charts based on a key indexed array of data and an
  * array of charts configuration data.
  *
- * @module gallery-charts-stockindicators
  * @class StockIndicatorsChart
  * @constructor
+ * @param {Object} config An object literal contain properties defined in the <a href="#attr_charts">charts</a> attribute.
  */
 function StockIndicatorsChart() {
     StockIndicatorsChart.superclass.constructor.apply(this, arguments);
@@ -19,8 +25,12 @@ StockIndicatorsChart.ATTRS = {
      *          An object literal representing the `axes` for the chart. Each `axes` object contains a `date`
      *          and a `numeric` axis.
      *          <dl>
-     *              <dt>date</dt>The date axis is a `CategoryAxis` instance.
-     *              <dt>numeric</dt> The numeric axis is a `NumericAxis` instance.
+     *              <dt>date</dt><dd>A <a href="http://yuilibrary.com/yui/docs/api/classes/CategoryAxis.html">CategoryAxis</a>
+     *              instance. Possible attributes are listed
+     *              <a href="http://yuilibrary.com/yui/docs/api/classes/CategoryAxis.html#attr_appendLabelFunction">here</a>.</dd>
+     *              <dt>numeric</dt><dd>A <a href="http://yuilibrary.com/yui/docs/api/classes/NumericAxis.html">NumericAxis</a>
+     *              instance. Possible attributes are listed
+     *              <a href="http://yuilibrary.com/yui/docs/api/classes/NumericAxis.html#attr_alwaysShowZero">here</a>.</dd>
      *          </dl>
      *      </dd>
      *      <dt>categoryKey</dt><dd>A reference to the key in the `dataProvider` that represents the values
@@ -28,24 +38,11 @@ StockIndicatorsChart.ATTRS = {
      *      <dt>colors</dt><dd>An object containing key values pairs in which the key is a reference to the values
      *      of the `dataProvider` and the value is the color associated with each key. This data is used to determine
      *      the colors for the corresponding graphs, legends and crosshair markers.</dd>
-     *      <dt>crosshair</dt><dd>Configuration properties for the crosshair display that shows when
+     *      <dt>crosshair</dt><dd>Configuration properties for the <a href="Crosshair.html">Crosshair</a>  display that shows when
      *      interacting with a chart. It consists of `marker` shapes that correspond with each series of the
      *      chart, and optional horizontal and vertical lines. By default, the vertical line is displayed and
      *      the horizontal line is not. The colors of each `marker` is determined by its corresponding series
-     *      color. The crosshairConfig object has the following configurable properties:
-     *          <dl>
-     *              <dt>dotdiameter</dt><dd>The diameter of the circle or dot.</dd>
-     *              <dt>drawHorizontal</dt><dd>Indicates whether to draw the horizontal line. The default
-     *              value is `false`.</dd>
-     *              <dt>drawVertical</dt><dd>Indicates whether to draw the verical line. The default
-     *              value is `true`.</dd>
-     *              <dt>lineColor</dt><dd>The color to use for lines.</dd>
-     *              <dt>lineWidth</dt><dd>The weight of the lines.</dd>
-     *              <dt>useCircle</dt><dd>Determines whether to use an empty circle. The default value is
-     *              `false`.</dd>
-     *              <dt>useDot</dt><dd>Determines whether to use a dot. The default value is `true`.</dd>
-     *          </dl>
-     *      </dd>
+     *      color. Possible configuration values are documented <a href="Crosshair.html">here</a>.</dd>
      *      <dt>dotdiameter</dt><dd>The diameter to be used for marker graphs in the chart.</dd>
      *      <dt>gridcolor</dt><dd>The color to be used for the background grid of the chart.</dd>
      *      <dt>height</dt><dd>The height of the chart including the legend, graph and date axis.</dd>
@@ -57,9 +54,11 @@ StockIndicatorsChart.ATTRS = {
      *              <dt>currency</dt><dd>Reference to the currency used to measure the data.</dd>
      *              <dt>displayKey</dt><dd>A key or array of keys, depending on the indicator mapped to a valueKey
      *              from the `dataProvider` that will be displayed in the corresponding legend.</dd>
+     *              <dt>groupMarkers</dt><dd>Indicates whether to draw all markers as a single dom element.</dd>
      *              <dt>indicator</dt><dd>Represents the type of indicator data that will be displayed. (e.g. `quote`,
      *              `bollinger`, `psar`)</dd>
      *              <dt>iscomp</dt><dd>Indicates whether the indicator is a comparison indicator.</dd>
+     *              <dt>labels</dt><dd>An array of of values used to create labels on the x-axis.</dd>
      *              <dt>ticker</dt><dd>Indicates the stock ticker of the indicator. (e.g. `yhoo`)</dd>
      *              <dt>type</dt><dd>Indicates the type of financial graph used to display the indicator data.
      *              (e.g. `candlestick`, `line`)
@@ -67,38 +66,9 @@ StockIndicatorsChart.ATTRS = {
      *              values from the `dataProvider`.</dd>
      *          </dl>
      *      </dd>
-     *      <dt>legend</dt><dd>
-     *          <dl>
-     *              <dt>currency</dt><dd>The prefix to be used for the values in each legend item.</dd>
-     *              <dt>dataProvider</dt><dd>Reference to the application's `dataProvider` attribute.</dd>
-     *              <dt>dateColor</dt><dd>The color to be used for the date text in the legend.</dd>
-     *              <dt>delim</dt><dd>String value prefixing the display name of each legend item.</dd>
-     *              <dt>displayKeys</dt><dd>An array of displayKeys to be used in the legend. Each display key
-     *              is the text to be displayed in the legend for the corresponding value key.</dd>
-     *              <dt>dislayName</dt><dd>Indicates whether to display the display name. The default
-     *              value is `true`.</dd>
-     *              <dt>displayValue</dt><dd>Indicates whether to display the value. The default value
-     *              is `true`.</dd>
-     *              <dt>drawSwatch</dt><dd>Indicates whether or no to draw a colored swatch by the display
-     *              name. The default value is `true`.</dd>
-     *              <dt>font</dt><dd>The font to use for all text in the legend.</dd>
-     *              <dt>fontSize</dt><dd>The font size to use for all text in the legend.</dd>
-     *              <dt>height</dt><dd>The height of the legend.</dd>
-     *              <dt>priceDownColor</dt><dd>The color to be used for the value text when the value is negative.</dd>
-     *              <dt>priceUpColor</dt><dd>The color to be used for value text when the value is positive.</dd>
-     *              <dt>swatchWidth</dt><dd>The width of the swatch for each legend item.</dd>
-     *              <dt>valueKeys</dt><dd>The value keys, in order, to be used in the legend.</dd>
-     *              <dt>valueLabelFormat</dt><dd>Object literal indicating how to format the legend values.
-     *                  <dl>
-     *                      <dt>prefix</dt><dd>The prefix.</dd>
-     *                      <dt>suffix</dt><dd>The suffix.</dd>
-     *                      <dt>thousandsSeparator</dt><dd>The thousands separator.</dd>
-     *                      <dt>decimalPlaces</dt><dd>The number of decimals to display.</dd>
-     *                      <dt>decimalsSeparator</dt><dd>The decimal separator.</dd>
-     *                  </dl>
-     *              </dd>
-     *          </dl>
-     *      </dd>
+     *      <dt>legend</dt><dd>Configuration properties used to construct the <a href="StockIndicatorsLegend.html">StockIndicatorsLegend</a>.
+     *      Possible configuration values are documented <a href="StockIndicatorsLegend.html">here</a>. The x and y properties are not
+     *      configurable through this object as they are determined by the layout of the charts in this application. </dd>
      *      <dt>lineWidth</dt><dd>The weight to be used for line graphs in the chart.</dd>
      *      <dt>numBar</dt><dd>The value used to calculate the width of the columns in a graph when the `rangeType` is
      *      `daily`. By default, the column width is determined from number of data values across the x axis and the
@@ -113,7 +83,7 @@ StockIndicatorsChart.ATTRS = {
      *      <dt>y</dt><dd>The y coordinate for the chart in relation to the application.</dd>
      *  </dl>
      *
-     *  @attribute chartsData
+     *  @attribute charts
      *  @type: Array
      */
     charts: {},

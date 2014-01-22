@@ -116,13 +116,30 @@ if(Y.VMLShape) {
 }
 
 /**
+ * Provides functionality for a crosshair.
+ *
+ * @module gallery-charts-stockindicators
+ */
+
+/**
  * Creates an updatable crosshair on the Graph which can be controlled
  * by mouse and touch events.
  *
- * @module gallery-charts-stockindicators
  * @class Crosshair
  * @constructor
  * @param {Object} config Configuration parameters.
+ *  <dl>
+ *      <dt>dotdiameter</dt><dd>The diameter of the circle or dot.</dd>
+ *      <dt>drawHorizontal</dt><dd>Indicates whether to draw the horizontal line. The default
+ *      value is `false`.</dd>
+ *      <dt>drawVertical</dt><dd>Indicates whether to draw the verical line. The default
+ *      value is `true`.</dd>
+ *      <dt>lineColor</dt><dd>The color to use for lines.</dd>
+ *      <dt>lineWidth</dt><dd>The weight of the lines.</dd>
+ *      <dt>useCircle</dt><dd>Determines whether to use an empty circle. The default value is
+ *      `false`.</dd>
+ *      <dt>useDot</dt><dd>Determines whether to use a dot. The default value is `true`.</dd>
+ *  </dl>
  */
 Y.Crosshair = function() {
     this.initializer.apply(this, arguments);

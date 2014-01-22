@@ -1,10 +1,50 @@
 /**
+ * Provides functionality for a legend.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
  * Displays a legend when the user interacts with the corresponding chart
  * application.
  *
- * @module gallery-charts-stockindicators
  * @class StockIndicatorsLegend
  * @constructor
+ * @param {Object} config Configuration parameters.
+ *  <dl>
+ *      <dt>dataProvider</dt><dd>Reference to the application's `dataProvider` attribute.</dd>
+ *      <dt>dateColor</dt><dd>The color to be used for the date text in the legend.</dd>
+ *      <dt>delim</dt><dd>String value prefixing the display name of each legend item.</dd>
+ *      <dt>dateLabelFunction</dt><dd>The function used for formatting the date label.</dd>
+ *      <dt>dateLabelFormat</dt><dd>The strf format used to format the date label.</dd>
+ *      <dt>dateLabelScope</dt><dd>The scope for the dateLabelFunction</dd>
+ *      <dt>displayKeys</dt><dd>An array of displayKeys to be used in the legend. Each display key
+ *      is the text to be displayed in the legend for the corresponding value key.</dd>
+ *      <dt>displayName</dt><dd>Indicates whether to display the display name. The default
+ *      value is `true`.</dd>
+ *      <dt>displayValue</dt><dd>Indicates whether to display the value. The default value
+ *      is `true`.</dd>
+ *      <dt>drawSwatch</dt><dd>Indicates whether or no to draw a colored swatch by the display
+ *      name. The default value is `true`.</dd>
+ *      <dt>font</dt><dd>The font to use for all text in the legend.</dd>
+ *      <dt>fontSize</dt><dd>The font size to use for all text in the legend.</dd>
+ *      <dt>height</dt><dd>The height of the legend.</dd>
+ *      <dt>priceDownColor</dt><dd>The color to be used for the value text when the value is negative.</dd>
+ *      <dt>priceUpColor</dt><dd>The color to be used for value text when the value is positive.</dd>
+ *      <dt>swatchWidth</dt><dd>The width of the swatch for each legend item.</dd>
+ *      <dt>valueKeys</dt><dd>The value keys, in order, to be used in the legend.</dd>
+ *      <dt>valueLabelFormat</dt><dd>Object literal indicating how to format the legend values.
+ *          <dl>
+ *              <dt>prefix</dt><dd>The prefix.</dd>
+ *              <dt>suffix</dt><dd>The suffix.</dd>
+ *              <dt>thousandsSeparator</dt><dd>The thousands separator.</dd>
+ *              <dt>decimalPlaces</dt><dd>The number of decimals to display.</dd>
+ *              <dt>decimalsSeparator</dt><dd>The decimal separator.</dd>
+ *          </dl>
+ *      </dd>
+ *      <dt>width</dt><dd>The width of the legend.</dd>
+ *      <dt>x</dt><dd>The x-coordinate for the legend</dd>
+ *      <dt>y</dt><dd>The y-coordinate for the legend</dd>
+ *  </dl>
  */
 function StockIndicatorsLegend() {
     this.init.apply(this, arguments);
