@@ -85,7 +85,7 @@ Y.StockIndicatorsSpark.prototype = {
             alwaysShowZero: false
         });
         bb.style.position = "absolute";
-        bb.style.display = "inlineBlock";
+        Y.DOM.setStyle(bb, "inlineBlock");
         cb.style.position = "relative";
         render = document.getElementById(render);
         render.appendChild(bb);
