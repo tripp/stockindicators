@@ -1,6 +1,7 @@
 {
     "gallery-charts-stockindicators": {
         "requires": [
+            "escape",
             "graphics-group",
             "axis-numeric",
             "axis-category",
