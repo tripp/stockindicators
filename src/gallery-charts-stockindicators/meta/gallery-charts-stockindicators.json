@@ -9,9 +9,7 @@
             "series-marker",
             "series-column",
             "series-candlestick",
-            "series-area",
-            "series-line-multiple",
-            "series-column-volume"
+            "series-area"
         ]
     }
 }

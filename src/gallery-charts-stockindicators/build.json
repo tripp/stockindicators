@@ -3,6 +3,8 @@
     "builds": {
         "gallery-charts-stockindicators": {
             "jsfiles": [
+                "VolumeColumn.js",
+                "MultipleLineSeries.js",
                 "Crosshair.js",
                 "Gridlines.js",
                 "StockIndicatorsLegend.js",
