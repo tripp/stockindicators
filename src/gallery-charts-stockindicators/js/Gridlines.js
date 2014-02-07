@@ -73,12 +73,12 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
             points,
             direction = this.get("direction"),
             graphic = this.get("graphic"),
-            fill = this.get("styles").fill,
-            border = this.get("styles").border,
-            line = this.get("styles").line,
+            styles = this.get("styles"),
+            fill = styles.fill,
+            border = styles.border,
+            line = styles.line,
             stroke = fill && border ? border : line,
-            cfg,
-            lineFunction;
+            cfg;
         startIndex = startIndex || 0;
         interval = interval || 2;
         if(isFinite(w) && isFinite(h) && w > 0 && h > 0)
@@ -117,13 +117,19 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
             }
             if(direction === "vertical")
             {
-                lineFunction = fill ? this._verticalFill : this._verticalLine;
-                lineFunction(path, points, h, startIndex, interval, w);
+                if(fill) {
+                    this._verticalFill(path, points, h, startIndex, interval, w);
+                } else {
+                    this._verticalLine(path, points, h, styles);
+                }
             }
             else
             {
-                lineFunction = fill ? this._horizontalFill : this._horizontalLine;
-                lineFunction(path, points, w, startIndex, interval, h);
+                if(fill) {
+                    this._horizontalFill(path, points, w, startIndex, interval, h);
+                } else {
+                    this._horizontalLine(path, points, w, styles);
+                }
             }
             path.end();
         }
@@ -163,12 +169,12 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * @param {Number} w Width of the Graph
      * @private
      */
-    _horizontalLine: function(path, points, width)
+    _horizontalLine: function(path, points, width, styles)
     {
-        var i,
-            len = points.length,
+        var i = styles.showFirst ? 0 : 1,
+            len = styles.showLast ? points.length : points.length - 1,
             y;
-        for(i = 0; i < len; i = i + 1)
+        for(; i < len; i = i + 1)
         {
             y = points[i].y;
             path.moveTo(0, y);
@@ -185,12 +191,12 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * @param {Number} h Height of the Graph
      * @private
      */
-    _verticalLine: function(path, points, height)
+    _verticalLine: function(path, points, height, styles)
     {
-        var i,
-            len = points.length,
+        var i = styles.showFirst ? 0 : 1,
+            len = styles.showLast ? points.length : points.length - 1,
             x;
-        for(i = 0; i < len; i = i + 1)
+        for(; i < len; i = i + 1)
         {
             x = points[i].x;
             path.moveTo(x, 0);
@@ -276,7 +282,9 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
                 weight: 1,
                 alpha: 1
             },
-            fill: null
+            fill: null,
+            showFirst: true,
+            showLast: true
         };
         return defs;
     }

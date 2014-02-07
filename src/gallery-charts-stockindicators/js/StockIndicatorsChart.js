@@ -10,104 +10,11 @@
  *
  * @class StockIndicatorsChart
  * @constructor
+ * @extends Widget
+ * @uses Renderer
  * @param {Object} config An object literal contain properties defined in the <a href="#attr_charts">charts</a> attribute.
  */
-function StockIndicatorsChart() {
-    StockIndicatorsChart.superclass.constructor.apply(this, arguments);
-}
-StockIndicatorsChart.NAME = "stockChart";
-StockIndicatorsChart.ATTRS = {
-    /**
-     * An array of `chart` objects containing necessary data and configuration properties to generate a stock indicator
-     * chart application. Each index of the array is represented in the structure below.
-     *  <dl>
-     *      <dt>axes</dt><dd>
-     *          An object literal representing the `axes` for the chart. Each `axes` object contains a `date`
-     *          and a `numeric` axis.
-     *          <dl>
-     *              <dt>date</dt><dd>A <a href="http://yuilibrary.com/yui/docs/api/classes/CategoryAxis.html">CategoryAxis</a>
-     *              instance. Possible attributes are listed
-     *              <a href="http://yuilibrary.com/yui/docs/api/classes/CategoryAxis.html#attr_appendLabelFunction">here</a>.</dd>
-     *              <dt>numeric</dt><dd>A <a href="http://yuilibrary.com/yui/docs/api/classes/NumericAxis.html">NumericAxis</a>
-     *              instance. Possible attributes are listed
-     *              <a href="http://yuilibrary.com/yui/docs/api/classes/NumericAxis.html#attr_alwaysShowZero">here</a>.</dd>
-     *          </dl>
-     *      </dd>
-     *      <dt>categoryKey</dt><dd>A reference to the key in the `dataProvider` that represents the values
-     *      used for the date axis of the chart.</dd>
-     *      <dt>colors</dt><dd>An object containing key values pairs in which the key is a reference to the values
-     *      of the `dataProvider` and the value is the color associated with each key. This data is used to determine
-     *      the colors for the corresponding graphs, legends and crosshair markers.</dd>
-     *      <dt>crosshair</dt><dd>Configuration properties for the <a href="Crosshair.html">Crosshair</a>  display that shows when
-     *      interacting with a chart. It consists of `marker` shapes that correspond with each series of the
-     *      chart, and optional horizontal and vertical lines. By default, the vertical line is displayed and
-     *      the horizontal line is not. The colors of each `marker` is determined by its corresponding series
-     *      color. Possible configuration values are documented <a href="Crosshair.html">here</a>.</dd>
-     *      <dt>dotdiameter</dt><dd>The diameter to be used for marker graphs in the chart.</dd>
-     *      <dt>gridcolor</dt><dd>The color to be used for the background grid of the chart.</dd>
-     *      <dt>height</dt><dd>The height of the chart including the legend, graph and date axis.</dd>
-     *      <dt>indicators</dt><dd>An array of objects in which each object contains data about the financial
-     *      indicator that will be represented with a financial graph. Each financial graph may be represented
-     *      by one or more actual graph instances. (e.g. One financial may contain multiple line graphs as in the
-     *      case of bollinger bands.) Each indicator object contains the following properties:
-     *          <dl>
-     *              <dt>currency</dt><dd>Reference to the currency used to measure the data.</dd>
-     *              <dt>displayKey</dt><dd>A key or array of keys, depending on the indicator mapped to a valueKey
-     *              from the `dataProvider` that will be displayed in the corresponding legend.</dd>
-     *              <dt>groupMarkers</dt><dd>Indicates whether to draw all markers as a single dom element.</dd>
-     *              <dt>indicator</dt><dd>Represents the type of indicator data that will be displayed. (e.g. `quote`,
-     *              `bollinger`, `psar`)</dd>
-     *              <dt>iscomp</dt><dd>Indicates whether the indicator is a comparison indicator.</dd>
-     *              <dt>labels</dt><dd>An array of of values used to create labels on the x-axis.</dd>
-     *              <dt>ticker</dt><dd>Indicates the stock ticker of the indicator. (e.g. `yhoo`)</dd>
-     *              <dt>type</dt><dd>Indicates the type of financial graph used to display the indicator data.
-     *              (e.g. `candlestick`, `line`)
-     *              <dt>valueKey</dt>A key or array of keys, depending on the indicator, representing the related
-     *              values from the `dataProvider`.</dd>
-     *          </dl>
-     *      </dd>
-     *      <dt>legend</dt><dd>Configuration properties used to construct the <a href="StockIndicatorsLegend.html">StockIndicatorsLegend</a>.
-     *      Possible configuration values are documented <a href="StockIndicatorsLegend.html">here</a>. The x and y properties are not
-     *      configurable through this object as they are determined by the layout of the charts in this application. </dd>
-     *      <dt>lineWidth</dt><dd>The weight to be used for line graphs in the chart.</dd>
-     *      <dt>numBar</dt><dd>The value used to calculate the width of the columns in a graph when the `rangeType` is
-     *      `daily`. By default, the column width is determined from number of data values across the x axis and the
-     *      width of the graph.</dd>
-     *      <dt>rangeType</dt><dd>The range type for the chart.
-     *          <dl>
-     *              <dt>intraday</dt><dd>The date range spans across a single day.</dd>
-     *              <dt>daily</dt><dd>The date range spans across multiple days.</dd>
-     *          </dl>
-     *      </dd>
-     *      <dt>width</dt><dd>The width of the chart.</dd>
-     *      <dt>y</dt><dd>The y coordinate for the chart in relation to the application.</dd>
-     *  </dl>
-     *
-     *  @attribute charts
-     *  @type: Array
-     */
-    charts: {},
-
-    /**
-     * Data used to generate the charts.
-     *
-     * @attribute dataProvider
-     * @type Array
-     */
-    dataProvider: {
-        lazyAdd: false,
-
-        getter: function() {
-            return this._dataProvider;
-        },
-
-        setter: function(val) {
-            this._dataProvider = val;
-            return val;
-        }
-    }
-};
-Y.extend(StockIndicatorsChart, Y.Widget, {
+Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Renderer],  {
     /**
      * Draws a charts based on a config object.
      *
@@ -237,7 +144,7 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
                             window.webkitRequestAnimationFrame ||
                             window.msRequestAnimationFrame;
         this._autoDraw = this._onEnterFrame ? false : true;
-        StockIndicatorsChart.superclass.initializer.apply(this, arguments);
+        Y.StockIndicatorsChart.superclass.initializer.apply(this, arguments);
     },
 
     /**
@@ -251,7 +158,9 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         line: Y.LineSeries,
         marker: Y.MarkerSeries,
         column: Y.ColumnSeries,
-        candlestick: Y.CandlestickSeries
+        candlestick: Y.CandlestickSeries,
+        multipleline: Y.MultipleLineSeries,
+        volumecolumn: Y.VolumeColumn
     },
 
     /**
@@ -278,6 +187,7 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
      */
     _getSeriesCollection: function(config) {
         var seriesCollection = [],
+            seriesConfig,
             indicator,
             indicators = config.indicators,
             indicatorType,
@@ -286,32 +196,43 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
             valueIter,
             valueLen,
             valueKey,
-            groupMarkers;
+            groupMarkers,
+            nomarkers = ["candlestick", "line", "ohlc", "volumecolumn", "multipleline"];
         for(indIter = 0; indIter < indLen; indIter = indIter + 1) {
             indicator = indicators[indIter];
             valueKey = indicator.valueKey;
             indicatorType = indicator.type;
             if(indicatorType === "candlestick" || typeof valueKey === "string") {
-                groupMarkers = indicatorType !== "candlestick" &&
-                                indicatorType !== "line" &&
-                                indicator.groupMarkers;
-                seriesCollection.push({
+                groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                seriesConfig = {
                     groupMarkers: groupMarkers,
                     type: indicator.type,
                     xKey: config.categoryKey,
                     yKey: indicator.valueKey
-                });
+                };
+                seriesCollection.push(seriesConfig);
             } else {
                valueLen = valueKey.length;
                for(valueIter = 0; valueIter < valueLen; valueIter = valueIter + 1) {
                     indicatorType = indicator.type;
-                    groupMarkers = indicatorType !== "line" && indicator.groupMarkers;
-                    seriesCollection.push({
-                        groupMarkers: groupMarkers,
-                        type: typeof indicatorType === "string" ? indicatorType : indicatorType[valueIter],
+                    seriesConfig = {
                         xKey: config.categoryKey,
                         yKey: indicator.valueKey[valueIter]
-                    });
+                    };
+                    if(typeof indicatorType === "string") {
+                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                        seriesConfig.type = indicatorType;
+                    } else {
+                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
+                        seriesConfig.type = indicatorType[valueIter];
+                        if(indicatorType[valueIter] === "multipleline") {
+                            seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
+                        } else if(indicatorType[valueIter] === "volumecolumn") {
+                            seriesConfig.threshold = parseFloat(indicator.previousClose);
+                            seriesConfig.yAxis = new Y.NumericAxisBase(indicator.yAxis);
+                        }
+                    }
+                    seriesCollection.push(seriesConfig);
                }
             }
         }
@@ -340,12 +261,37 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         for(i = 0; i < len; i = i + 1) {
             series = seriesCollection[i];
             switch(series.type) {
+                case "volumecolumn" :
+                    series.styles = {
+                        positive: {
+                            fill: {
+                                color: colors.priceUp,
+                                alpha: 0.5
+                            }
+                        },
+                        negative: {
+                            fill: {
+                                color: colors.priceDown,
+                                alpha: 0.5
+                            }
+                        },
+                        padding: {
+                            top: 200
+                        }
+                    };
+                break;
                 case "line" :
                     series.styles = {
                         line: {
                             weight: config.lineWidth,
                             color: colors[series.yKey]
                         }
+                    };
+                break;
+                case "multipleline" :
+                    series.styles = {
+                        weight: config.lineWidth,
+                        colors: [colors[series.yKey], colors.priceDown]
                     };
                 break;
                 case "candlestick" :
@@ -428,7 +374,9 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         for(i = 0; i < len; i = i + 1) {
             series = seriesCollection[i];
             series.xAxis = dateAxis;
-            series.yAxis = numericAxis;
+            if(!series.yAxis) {
+                series.yAxis = numericAxis;
+            }
             series.graphic = graphic;
             GraphClass = this._getGraph(series.type);
             graph = new GraphClass(series);
@@ -455,29 +403,27 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
      * @return Object
      * @private
      */
-    _drawGridlines: function(config, axes, graphic) {
-        var width = graphic.get("width"),
-            height = graphic.get("height"),
+    _drawGridlines: function(horizontalGridlinesConfig, verticalGridlinesConfig, axes, graphic) {
+        var horizontalGridlines,
+            verticalGridlines;
+        if(horizontalGridlinesConfig) {
             horizontalGridlines = new Y.Gridlines({
-                graphic:graphic,
-                direction: "horizontal",
-                axis: axes.numeric
-            }),
-            verticalGridlines = new Y.Gridlines({
                 graphic: graphic,
+                direction: "horizontal",
+                axis: axes.numeric,
+                styles: horizontalGridlinesConfig
+            });
+        }
+        if(verticalGridlinesConfig) {
+            verticalGridlines = new Y.Gridlines({
+                graphic:graphic,
                 direction: "vertical",
                 axis: axes.date,
-                styles: {
-                    fill: {
-                        color: config.gridColor
-                    },
-                    border: {
-                        weight: 0
-                    }
-                }
+                styles: verticalGridlinesConfig
             });
-        horizontalGridlines.draw(width, height);
-        verticalGridlines.draw(width, height, config.rangeType === 'intraday' ? 0 : 1);
+        }
+        horizontalGridlines.draw(horizontalGridlinesConfig.width, horizontalGridlinesConfig.height);
+        verticalGridlines.draw(verticalGridlinesConfig.width, verticalGridlinesConfig.height);
         horizontalGridlines._path.toBack();
         verticalGridlines._path.toBack();
         return {
@@ -498,6 +444,26 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         numericbase: Y.NumericAxisBase,
         category: Y.CategoryAxis,
         categorybase: Y.CategoryAxisBase
+    },
+
+    _adjustForInnerLabels: function(config) {
+        var positionMap = {
+                right: "left",
+                left: "right",
+                top: "bottom",
+                bottom: "top",
+                none: "none",
+                cross: "cross"
+            },
+            styles = config.styles;
+        config.position = positionMap[config.position];
+        if(styles) {
+            if(styles.majorTicks && styles.majorTicks.display) {
+                styles.majorTicks.display = positionMap[styles.majorTicks.display];
+            }
+            config.styles = styles;
+        }
+        return config;
     },
 
     /**
@@ -523,9 +489,15 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         numericConfig.y = config.y + config.legend.height;
         numericConfig.x = config.width - numericConfig.width;
         numericConfig.height = config.height - dateConfig.height - config.legend.height;
+        if(numericConfig.labelsInGraph) {
+            numericConfig = this._adjustForInnerLabels(numericConfig);
+        }
         dateConfig.render = cb;
         dateConfig.y = config.y + config.height - dateConfig.height;
-        dateConfig.width = config.width;
+        dateConfig.width = config.width - numericConfig.width;
+        if(dateConfig.labelsInGraph) {
+            dateConfig = this._adjustForInnerLabels(dateConfig);
+        }
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
@@ -554,8 +526,8 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
     _drawHotspot: function(config, cb) {
         var hotspot = Y.Node.create(
             '<div class="yui3-hotspot" id="fincharthotspot_' + this._hotspots.length +
-            '" style="width:' + config.width + 'px;height:' + (config.height - config.legend.height - config.axes.date.height) +
-            'px;position:absolute;left:0px;top:' + (config.y + config.legend.height) + 'px;opacity:0;background:#fff;z-index:4"></div>'
+            '" style="width:' + config.width + 'px;height:' + (config.height) +
+            'px;position:absolute;left:' + config.x + 'px;top:' + config.y + 'px;opacity:0;background:#fff;z-index:4"></div>'
         );
         hotspot.setStyle("opacity", 0);
         cb.append(hotspot);
@@ -572,16 +544,97 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
      * @private
      */
     _createGraphic: function(config, cb) {
+        /*
+        var graphConfig = config[type],
+            graphic,
+            axisWidth = config.axes.numeric.width,
+            axisHeight = config.axes.date.height,
+            yAxisPosition = config.axes.numeric.position,
+            xAxisPosition = config.axes.date.position,
+            graphX = 0,
+            graphY = config.y,
+            graphWidth = this.get("width"),
+            graphHeight = config.height;
+        if(config.legend) {
+            graphY = graphY + config.legend.height;
+            graphHeight = graphHeight - config.legend.height;
+        }
+        if(!graphConfig || !graphConfig.overlapXAxis) {
+            graphHeight = graphHeight - axisHeight;
+            if(xAxisPosition === "top") {
+                graphY = graphY + axisHeight;
+            }
+        }
+        if(!graphConfig || !graphConfig.overlapYAxis) {
+            graphWidth = graphWidth - axisWidth;
+            if(yAxisPosition === "left") {
+                graphX = graphX + axisWidth;
+            }
+        }
+
+        graphic = new Y.Graphic({
+            render: cb,
+            width: graphWidth,
+            height: graphHeight,
+            x: graphX,
+            y: graphY,
+            autoDraw: false
+        });
+        this._graphics.push(graphic);
+        if(!graphConfig) {
+            config.graph = {};
+        }
+        config.graph.width = graphWidth;
+        config.graph.height = graphHeight;
+        config.graph.x = graphX;
+        config.graph.y = graphY;
+        config.legend.width = graphWidth;
+        config.legend.x = graphX;
+        */
         var graphic = new Y.Graphic({
-                render: cb,
-                width: this.get("width"),
-                height: config.height - config.legend.height - config.axes.date.height,
-                x: 0,
-                y: config.y + config.legend.height,
-                autoDraw: false
-            });
+            render: cb,
+            width: config.width,
+            height: config.height,
+            x: config.x,
+            y: config.y,
+            autoDraw: false
+        });
         this._graphics.push(graphic);
         return graphic;
+    },
+
+    _getGraphicDimensions: function(config, type) {
+        var graphicConfig,
+            axisWidth = config.axes.numeric.width,
+            axisHeight = config.axes.date.height,
+            yAxisPosition = config.axes.numeric.position,
+            xAxisPosition = config.axes.date.position,
+            graphicX = 0,
+            graphicY = config.y,
+            graphicWidth = this.get("width"),
+            graphicHeight = config.height;
+        graphicConfig = config[type] ? this._copyObject(config[type]) : {};
+        if(config.legend) {
+            graphicY = graphicY + config.legend.height;
+            graphicHeight = graphicHeight - config.legend.height;
+        }
+        if(!graphicConfig || !graphicConfig.overlapXAxis) {
+            graphicHeight = graphicHeight - axisHeight;
+            if(xAxisPosition === "top") {
+                graphicY = graphicY + axisHeight;
+            }
+        }
+        if(!graphicConfig || !graphicConfig.overlapYAxis) {
+            graphicWidth = graphicWidth - axisWidth;
+            if(yAxisPosition === "left") {
+                graphicX = graphicX + axisWidth;
+            }
+        }
+        graphicConfig.width = graphicWidth;
+        graphicConfig.height = graphicHeight;
+        graphicConfig.x = graphicX;
+        graphicConfig.y = graphicY;
+        return graphicConfig;
     },
 
     /**
@@ -594,27 +647,25 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
      * @return Crosshair
      * @private
      */
-    _addCrosshair: function(config, graphs,  cb) {
+    _addCrosshair: function(config, colors, graphs,  cb) {
         var crosshair,
-            crosshairConfig = config.crosshair,
             crosshaircategory = {
                 stroke: {
-                    color: crosshairConfig.lineColor,
-                    weight: crosshairConfig.lineWidth
+                    color: config.lineColor,
+                    weight: config.lineWidth
                 }
             },
             crosshairseries = [],
             graph,
-            key,
-            colors = config.colors;
+            key;
         for(key in graphs) {
             if(graphs.hasOwnProperty(key)) {
                 graph = graphs[key];
                 crosshairseries.push({
                     marker: {
                         shape: "circle",
-                        width: crosshairConfig.dotDiameter,
-                        height: crosshairConfig.dotDiameter,
+                        width: config.dotDiameter,
+                        height: config.dotDiameter,
                         fill: {
                             color: colors[key === "quote" ? "close" : key]
                         },
@@ -629,9 +680,9 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         }
         crosshair = new Y.Crosshair({
             width: config.width,
-            height: config.height - config.axes.date.height - config.legend.height,
-            x: 0,
-            y: config.y + config.legend.height,
+            height: config.height,
+            x: config.x,
+            y: config.y,
             render: cb,
             series: crosshairseries,
             category: crosshaircategory
@@ -660,6 +711,15 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         return legend;
     },
 
+    _getGridlinesDimensions: function(horizontalGridlines, verticalGridlines) {
+        return {
+            x: Math.min(horizontalGridlines.x, verticalGridlines.x),
+            y: Math.min(horizontalGridlines.y, verticalGridlines.y),
+            width: Math.max(horizontalGridlines.width, verticalGridlines.width),
+            height: Math.max(horizontalGridlines.height, verticalGridlines.height)
+        };
+    },
+
     /**
      * Generates all elements needed to create a finance chart application using
      * charts.
@@ -670,13 +730,37 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
      */
     drawChart: function(config, cb) {
         var chart,
-            axes = this._drawAxes(config, cb),
-            graphic = this._createGraphic(config, cb),
-            gridlines = this._drawGridlines(config, axes, graphic),
-            graphs = this._drawGraphs(config, axes, graphic),
-            hotspot = this._drawHotspot(config, cb),
-            crosshair = this._addCrosshair(config, graphs, cb),
-            legend = this._addLegend(config, cb);
+            axes,
+            graphic,
+            gridlinesGraphic,
+            gridlines,
+            graphs,
+            hotspot,
+            crosshair,
+            legend,
+            graphConfig = this._getGraphicDimensions(config, "graphs"),
+            horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines"),
+            verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
+
+        config.legend.x = graphConfig.x;
+        config.legend.width = graphConfig.width;
+
+        axes = this._drawAxes(config, cb);
+        gridlinesGraphic = this._createGraphic(
+            this._getGridlinesDimensions(horizontalGridlinesConfig, verticalGridlinesConfig),
+            cb
+        );
+        graphic = this._createGraphic(graphConfig, cb);
+        gridlines = this._drawGridlines(horizontalGridlinesConfig, verticalGridlinesConfig, axes, gridlinesGraphic);
+        graphs = this._drawGraphs(config, axes, graphic);
+        hotspot = this._drawHotspot(graphConfig, cb);
+        crosshair = this._addCrosshair(
+            this._mergeStyles(graphConfig, config.crosshair),
+            config.colors,
+            graphs,
+            cb
+        );
+        legend = this._addLegend(config, cb);
         chart = {
             axes: axes,
             graphic: graphic,
@@ -689,6 +773,7 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
         };
         //repaint the gridlines and graph
         graphic._redraw();
+        gridlinesGraphic._redraw();
         return chart;
     },
 
@@ -796,5 +881,96 @@ Y.extend(StockIndicatorsChart, Y.Widget, {
     destructor: function() {
         this._removeAll();
     }
+}, {
+    ATTRS: {
+        /**
+         * An array of `chart` objects containing necessary data and configuration properties to generate a stock indicator
+         * chart application. Each index of the array is represented in the structure below.
+         *  <dl>
+         *      <dt>axes</dt><dd>
+         *          An object literal representing the `axes` for the chart. Each `axes` object contains a `date`
+         *          and a `numeric` axis.
+         *          <dl>
+         *              <dt>date</dt><dd>A <a href="http://yuilibrary.com/yui/docs/api/classes/CategoryAxis.html">CategoryAxis</a>
+         *              instance. Possible attributes are listed
+         *              <a href="http://yuilibrary.com/yui/docs/api/classes/CategoryAxis.html#attr_appendLabelFunction">here</a>.</dd>
+         *              <dt>numeric</dt><dd>A <a href="http://yuilibrary.com/yui/docs/api/classes/NumericAxis.html">NumericAxis</a>
+         *              instance. Possible attributes are listed
+         *              <a href="http://yuilibrary.com/yui/docs/api/classes/NumericAxis.html#attr_alwaysShowZero">here</a>.</dd>
+         *          </dl>
+         *      </dd>
+         *      <dt>categoryKey</dt><dd>A reference to the key in the `dataProvider` that represents the values
+         *      used for the date axis of the chart.</dd>
+         *      <dt>colors</dt><dd>An object containing key values pairs in which the key is a reference to the values
+         *      of the `dataProvider` and the value is the color associated with each key. This data is used to determine
+         *      the colors for the corresponding graphs, legends and crosshair markers.</dd>
+         *      <dt>crosshair</dt><dd>Configuration properties for the <a href="Crosshair.html">Crosshair</a>  display that shows when
+         *      interacting with a chart. It consists of `marker` shapes that correspond with each series of the
+         *      chart, and optional horizontal and vertical lines. By default, the vertical line is displayed and
+         *      the horizontal line is not. The colors of each `marker` is determined by its corresponding series
+         *      color. Possible configuration values are documented <a href="Crosshair.html">here</a>.</dd>
+         *      <dt>dotdiameter</dt><dd>The diameter to be used for marker graphs in the chart.</dd>
+         *      <dt>gridcolor</dt><dd>The color to be used for the background grid of the chart.</dd>
+         *      <dt>height</dt><dd>The height of the chart including the legend, graph and date axis.</dd>
+         *      <dt>indicators</dt><dd>An array of objects in which each object contains data about the financial
+         *      indicator that will be represented with a financial graph. Each financial graph may be represented
+         *      by one or more actual graph instances. (e.g. One financial may contain multiple line graphs as in the
+         *      case of bollinger bands.) Each indicator object contains the following properties:
+         *          <dl>
+         *              <dt>currency</dt><dd>Reference to the currency used to measure the data.</dd>
+         *              <dt>displayKey</dt><dd>A key or array of keys, depending on the indicator mapped to a valueKey
+         *              from the `dataProvider` that will be displayed in the corresponding legend.</dd>
+         *              <dt>groupMarkers</dt><dd>Indicates whether to draw all markers as a single dom element.</dd>
+         *              <dt>indicator</dt><dd>Represents the type of indicator data that will be displayed. (e.g. `quote`,
+         *              `bollinger`, `psar`)</dd>
+         *              <dt>iscomp</dt><dd>Indicates whether the indicator is a comparison indicator.</dd>
+         *              <dt>labels</dt><dd>An array of of values used to create labels on the x-axis.</dd>
+         *              <dt>ticker</dt><dd>Indicates the stock ticker of the indicator. (e.g. `yhoo`)</dd>
+         *              <dt>type</dt><dd>Indicates the type of financial graph used to display the indicator data.
+         *              (e.g. `candlestick`, `line`)
+         *              <dt>valueKey</dt>A key or array of keys, depending on the indicator, representing the related
+         *              values from the `dataProvider`.</dd>
+         *          </dl>
+         *      </dd>
+         *      <dt>legend</dt><dd>Configuration properties used to construct the <a href="StockIndicatorsLegend.html">StockIndicatorsLegend</a>.
+         *      Possible configuration values are documented <a href="StockIndicatorsLegend.html">here</a>. The x and y properties are not
+         *      configurable through this object as they are determined by the layout of the charts in this application. </dd>
+         *      <dt>lineWidth</dt><dd>The weight to be used for line graphs in the chart.</dd>
+         *      <dt>numBar</dt><dd>The value used to calculate the width of the columns in a graph when the `rangeType` is
+         *      `daily`. By default, the column width is determined from number of data values across the x axis and the
+         *      width of the graph.</dd>
+         *      <dt>rangeType</dt><dd>The range type for the chart.
+         *          <dl>
+         *              <dt>intraday</dt><dd>The date range spans across a single day.</dd>
+         *              <dt>daily</dt><dd>The date range spans across multiple days.</dd>
+         *          </dl>
+         *      </dd>
+         *      <dt>width</dt><dd>The width of the chart.</dd>
+         *      <dt>y</dt><dd>The y coordinate for the chart in relation to the application.</dd>
+         *  </dl>
+         *
+         *  @attribute charts
+         *  @type: Array
+         */
+        charts: {},
+
+        /**
+         * Data used to generate the charts.
+         *
+         * @attribute dataProvider
+         * @type Array
+         */
+        dataProvider: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._dataProvider;
+            },
+
+            setter: function(val) {
+                this._dataProvider = val;
+                return val;
+            }
+        }
+    }
 });
-Y.StockIndicatorsChart = StockIndicatorsChart;
