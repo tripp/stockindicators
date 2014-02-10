@@ -225,10 +225,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     } else {
                         seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
-                        if(indicatorType[valueIter] === "multipleline") {
+                        if(indicatorType[valueIter] === "multipleline" && config.showThreshold) {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
                         } else if(indicatorType[valueIter] === "volumecolumn") {
-                            seriesConfig.threshold = parseFloat(indicator.previousClose);
+                            if(config.showThreshold) {
+                                seriesConfig.threshold = parseFloat(indicator.previousClose);
+                            }
                             seriesConfig.yAxis = new Y.NumericAxisBase(indicator.yAxis);
                         }
                     }
