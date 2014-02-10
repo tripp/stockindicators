@@ -546,53 +546,6 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @private
      */
     _createGraphic: function(config, cb) {
-        /*
-        var graphConfig = config[type],
-            graphic,
-            axisWidth = config.axes.numeric.width,
-            axisHeight = config.axes.date.height,
-            yAxisPosition = config.axes.numeric.position,
-            xAxisPosition = config.axes.date.position,
-            graphX = 0,
-            graphY = config.y,
-            graphWidth = this.get("width"),
-            graphHeight = config.height;
-        if(config.legend) {
-            graphY = graphY + config.legend.height;
-            graphHeight = graphHeight - config.legend.height;
-        }
-        if(!graphConfig || !graphConfig.overlapXAxis) {
-            graphHeight = graphHeight - axisHeight;
-            if(xAxisPosition === "top") {
-                graphY = graphY + axisHeight;
-            }
-        }
-        if(!graphConfig || !graphConfig.overlapYAxis) {
-            graphWidth = graphWidth - axisWidth;
-            if(yAxisPosition === "left") {
-                graphX = graphX + axisWidth;
-            }
-        }
-
-        graphic = new Y.Graphic({
-            render: cb,
-            width: graphWidth,
-            height: graphHeight,
-            x: graphX,
-            y: graphY,
-            autoDraw: false
-        });
-        this._graphics.push(graphic);
-        if(!graphConfig) {
-            config.graph = {};
-        }
-        config.graph.width = graphWidth;
-        config.graph.height = graphHeight;
-        config.graph.x = graphX;
-        config.graph.y = graphY;
-        config.legend.width = graphWidth;
-        config.legend.x = graphX;
-        */
         var graphic = new Y.Graphic({
             render: cb,
             width: config.width,
@@ -613,7 +566,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             xAxisPosition = config.axes.date.position,
             graphicX = 0,
             graphicY = config.y,
-            graphicWidth = this.get("width"),
+            graphicWidth = config.width,
             graphicHeight = config.height;
         graphicConfig = config[type] ? this._copyObject(config[type]) : {};
         if(config.legend) {
