@@ -447,7 +447,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         numeric: Y.NumericAxis,
         numericbase: Y.NumericAxisBase,
         category: Y.CategoryAxis,
-        categorybase: Y.CategoryAxisBase
+        categorybase: Y.CategoryAxisBase,
+        intraday: Y.IntradayAxis
     },
 
     _adjustForInnerLabels: function(config) {
