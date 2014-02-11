@@ -1,5 +1,392 @@
 YUI.add('gallery-charts-stockindicators', function (Y, NAME) {
 
+Y.VolumeColumn = function() {
+    Y.VolumeColumn.superclass.constructor.apply(this, arguments);
+};
+
+Y.VolumeColumn.NAME = "volumeColumn";
+
+Y.extend(Y.VolumeColumn, Y.RangeSeries, {
+    drawSeries: function() {
+        var valueData = this.get("yAxis").get("dataProvider"),
+            xcoords = this.get("xcoords"),
+            volumeCoords = this.get("ycoords"),
+            positivePath = this.get("positivePath"),
+            negativePath = this.get("negativePath"),
+            len = xcoords.length,
+            i,
+            styles = this.get("styles"),
+            padding = styles.padding,
+            dataWidth = this.get("width") - (padding.left + padding.right),
+            width = this._calculateMarkerWidth(dataWidth, len, styles.spacing),
+            halfwidth = width/2,
+            bottomOrigin = this._bottomOrigin,
+            top,
+            left,
+            height,
+            selectedPath,
+            threshold = this.get("threshold");
+        styles.positive.fill.opacity = styles.positive.fill.alpha;
+        styles.negative.fill.opacity = styles.negative.fill.alpha;
+        positivePath.set(styles.positive);
+        negativePath.set(styles.negative);
+        positivePath.clear();
+        negativePath.clear();
+        for(i = 0; i < len; i = i + 1) {
+            if(threshold) {
+                selectedPath = valueData[i].close < threshold ? negativePath : positivePath;
+            } else {
+                selectedPath = positivePath;
+            }
+            left = xcoords[i] - halfwidth;
+            top = volumeCoords[i];
+            height = bottomOrigin - top;
+            if(height > 0 && !isNaN(left) && !isNaN(top)) {
+                selectedPath.drawRect(left, top, width, height);
+            }
+        }
+        positivePath.end();
+        negativePath.end();
+    },
+
+    /**
+     * Toggles visibility
+     *
+     * @method _toggleVisible
+     * @param {Boolean} visible indicates visibilitye
+     * @private
+     */
+    _toggleVisible: function(visible)
+    {
+        this.get("positivePath").set("visible", visible);
+        this.get("negativePath").set("visible", visible);
+    },
+
+
+    /**
+     * Gets the default value for the `styles` attribute. Overrides
+     * base implementation.
+     *
+     * @method _getDefaultStyles
+     * @return Object
+     * @private
+     */
+    _getDefaultStyles: function()
+    {
+        var styles = {
+            positive: {
+                shapeRendering: "crispEdges",
+                fill: {
+                    color: "#00aa00",
+                    alpha: 1
+                },
+                stroke: {
+                    color: "#000000",
+                    alpha: 1,
+                    weight: 0
+                }
+            },
+            negative: {
+                shapeRendering: "crispEdges",
+                fill: {
+                    color: "#aa0000",
+                    alpha: 1
+                },
+                stroke: {
+                    color: "#000000",
+                    alpha: 1,
+                    weight: 0
+                }
+            }
+        };
+        return this._mergeStyles(styles, Y.VolumeColumn.superclass._getDefaultStyles());
+    }
+}, {
+    ATTRS: {
+        ohlcKeys: {
+            value: null
+        },
+        
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @readOnly
+         * @default volumecolumn
+         */
+        type: {
+            value: "volumecolumn"
+        },
+
+        /**
+         * The graphic in which drawings will be rendered.
+         *
+         * @attribute graphic
+         * @type Graphic
+         */
+        graphic: {
+            lazyAdd: false,
+
+            setter: function(val) {
+                //woraround for Attribute order of operations bug
+                if(!this.get("rendered")) {
+                    this.set("rendered", true);
+                }
+                this.set("positivePath", val.addShape({
+                   type: "path"
+                }));
+                this.set("negativePath", val.addShape({
+                   type: "path"
+                }));
+                return val;
+            }
+        },
+
+        positivePath: {},
+
+        negativePath: {},
+
+        threshold: {
+            lazyAdd: false
+        }
+    }
+});
+/**
+ * Provides functionality for creating a line series with alternating colors based on thresholds.
+ *
+ * @module charts
+ * @submodule series-line-multiple
+ */
+/**
+ * The MultipleLineSeries class renders quantitative data on a graph by connecting relevant data points and
+ * using different colors based on a defined threshold value.
+ *
+ * @class MultipleLineSeries
+ * @extends CartesianSeries
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ * @submodule series-line-multiple
+ */
+Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y.Lines],  {
+    drawSeries: function() {
+        this._drawLines();
+    },
+
+    /**
+     * Returns an array of path elements in which to draw the lines.
+     *
+     * @method _getPaths
+     * @param {Object} styles Reference to the styles attribute for the instance.
+     * @return Array
+     * @private
+     */
+    _getPaths: function(paths, styles, len)
+    {
+        var graphic,
+            path,
+            i,
+            colors,
+            alphas,
+            weight;
+        if(!paths) {
+            graphic = this.get("graphic") || this.get("graph").get("graphic");
+            paths = [];
+            colors = styles.colors;
+            alphas = styles.alphas;
+            weight = styles.weight;
+            for(i = 0; i < len; i = i + 1) {
+                path = graphic.addShape({
+                    type: "path",
+                    stroke: {
+                        color: colors[i % colors.length],
+                        opacity: alphas[i % alphas.length],
+                        weight: weight
+                    }
+                });
+                paths.push(path);
+            }
+
+        } else {
+            len = paths.length;
+            for(i = 0; i < len; i = i + 1) {
+                paths[i].clear();
+            }
+        }
+        return paths;
+    },
+
+    _getThresholdCoords: function(thresholds, len, styles, min, max, edgeOffset) {
+        var yAxis = this.get("yAxis"),
+            i,
+            height = this.get("height"),
+            padding = styles.padding,
+            offset = padding.top + edgeOffset,
+            thresholdCoords = [];
+        height = height -  padding.top - padding.bottom - edgeOffset * 2;
+        offset = height - offset;
+        for(i = 0; i < len; i = i + 1) {
+            thresholdCoords.push(
+                Math.round(yAxis._getCoordFromValue(min, max, height, thresholds[i], offset, true) * 1000)/1000
+            );
+        }
+        return thresholdCoords;
+    },
+
+    _drawThresholdLines: function(paths, thresholdCoords, len, styles) {
+        var path,
+            i,
+            xAxis = this.get("xAxis"),
+            edgeOffset = xAxis.get("edgeOffset"),
+            width = this.get("width"),
+            thresholdsStyles = styles.thresholds,
+            lineType = thresholdsStyles.lineType,
+            dashLength = thresholdsStyles.dashLength,
+            gapSpace = thresholdsStyles.gapSpace,
+            startX = styles.padding.left + edgeOffset,
+            endX = width - edgeOffset - styles.padding.right,
+            y;
+        for(i = 0; i < len; i = i + 1) {
+            y = thresholdCoords[i];
+            path = paths[i];
+            path.clear();
+            path.moveTo(startX, y);
+            if(lineType === "dashed") {
+                this.drawDashedLine(path, startX, y, endX, y, dashLength, gapSpace);
+            } else {
+                path.lineTo(endX, y);
+            }
+            path.end();
+        }
+    },
+
+    /**
+     * Draws lines for the series.
+     *
+     * @method drawLines
+     * @private
+     */
+    _drawLines: function()
+    {
+        if(this.get("xcoords").length < 1)
+        {
+            return;
+        }
+        var isNumber = Y.Lang.isNumber,
+            direction = this.get("direction"),
+            len,
+            lastPointValid,
+            pointValid,
+            noPointsRendered = true,
+            lastValidX,
+            lastValidY,
+            nextX,
+            nextY,
+            intersectX,
+            intersectY,
+            i,
+            m,
+            thresholds = this.get("thresholds"),
+            thresholdsLength = thresholds ? thresholds.length : 0,
+            pathIndex,
+            lastPathIndex,
+            thresholdIndex,
+            styles = this.get("styles"),
+            paths = this._getPaths(this._paths, styles, thresholdsLength + 1),
+            yAxis = this.get("yAxis"),
+            yMin = yAxis.get("minimum"),
+            yMax = yAxis.get("maximum"),
+            yEdgeOffset = yAxis.get("edgeOffset"),
+            thresholdCoords = this._getThresholdCoords(thresholds, thresholdsLength, styles, yMin, yMax, yEdgeOffset),
+            thresholdPaths = this._getPaths(this._thresholdPaths, styles.thresholds, thresholdsLength),
+            xcoords = this.get("xcoords"),
+            ycoords = this.get("ycoords");
+        this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
+        this._paths = paths;
+        this._thresholdPaths = thresholdPaths;
+        len = direction === "vertical" ? ycoords.length : xcoords.length;
+        for(i = 0; i < len; i = i + 1)
+        {
+            nextX = Math.round(xcoords[i] * 1000)/1000;
+            nextY = Math.round(ycoords[i] * 1000)/1000;
+            pointValid = isNumber(nextX) && isNumber(nextY);
+            if(pointValid) {
+                thresholdIndex = 0;
+                if(thresholds) {
+                    for(pathIndex = 0; pathIndex < thresholdsLength; pathIndex = pathIndex + 1) {
+                        if(nextY <= thresholdCoords[pathIndex]) {
+                            break;
+                        } else {
+                            thresholdIndex = pathIndex;
+                        }
+                    }
+                } else {
+                    pathIndex = 0;
+                }
+                if(noPointsRendered) {
+                    noPointsRendered = false;
+                    paths[pathIndex].moveTo(nextX, nextY);
+                } else {
+                    if(pathIndex !== lastPathIndex) {
+                        m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
+                        intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
+                        intersectY = thresholdCoords[thresholdIndex];
+                        if(isNumber(lastPathIndex)) {
+                            paths[lastPathIndex].lineTo(intersectX, intersectY);
+                        }
+                        paths[pathIndex].moveTo(intersectX, intersectY);
+                    }
+                    paths[pathIndex].lineTo(nextX, nextY);
+                }
+                lastValidX = nextX;
+                lastValidY = nextY;
+                lastPointValid = true;
+                lastPathIndex = pathIndex;
+            } else {
+                lastPointValid = pointValid;
+            }
+        }
+        len = paths.length;
+        for(i = 0; i < len; i = i + 1) {
+            paths[i].end();
+        }
+    },
+
+
+    /**
+     * Gets the default value for the `styles` attribute.
+     *
+     * @method _getDefaultStyles
+     * @return Object
+     * @protected
+     */
+    _getDefaultStyles: function() {
+        var styles = {
+                alphas: [1],
+                weight: 6,
+                colors: this._defaultLineColors.concat(),
+                thresholds: {
+                    colors: ["#999"],
+                    alphas: [1],
+                    weight: 1,
+                    lineType: "dashed",
+                    dashLength:5,
+                    gapSpace:5
+                }
+            };
+        return Y.merge(Y.Renderer.prototype._getDefaultStyles(), styles);
+    }
+}, {
+    ATTRS: {
+        /**
+         * An array of thresholds. Used to define where lines would change colors.
+         *
+         * @attribute thresholds
+         * @type Array
+         */
+        thresholds: {}
+    }
+});
 /**
  * Allows for the creation of a visualization based on financial
  * indicators..
@@ -75,8 +462,7 @@ Y.Crosshair.prototype = {
                     graph.xLine = graphic.addShape({
                         shapeRendering: "crispEdges",
                         type: "path",
-                        stroke: graph.stroke,
-                        fill: graph.fill
+                        stroke: graph.line.stroke
                     }).moveTo(0, 0).lineTo(width, 0).end();
                 }
                 if(graph.marker) {
@@ -116,7 +502,7 @@ Y.Crosshair.prototype = {
                     graph.marker.set("transform", "translate(" + x + ", " + y + ")");
                 }
                 if(graph.line) {
-                    graph.line.set("transform", "translate(" + x + ", " + y + ")");
+                    graph.xLine.set("transform", "translateY(" + y + ")");
                 }
             }
         }
@@ -144,25 +530,8 @@ Y.Crosshair.prototype = {
      * @method destroy
      */
     destroy: function() {
-        var series = this._series,
-            yline = this._yline,
-            graph,
-            i,
-            len;
-        if(series) {
-            len = series.length;
-            for(i = 0; i < len; i = i + 1) {
-                graph = series[i];
-                if(graph.marker) {
-                    graph.marker.get("graphic").destroy();
-                }
-                if(graph.line) {
-                    graph.line.get("graphic").destroy();
-                }
-                if(yline) {
-                    yline.get("graphic").destroy();
-                }
-            }
+        if(this.graphic) {
+            this.graphic.destroy();
         }
     }
 };
@@ -783,7 +1152,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 xy = chart.xy,
                 x = pageX - xy[0];
                 crosshair = this._crosshairs[i];
-                crosshair.setTarget(pageX, this._autoDraw);
+                if(crosshair) {
+                    crosshair.setTarget(pageX, this._autoDraw);
+                }
             }
             len = legends.length;
             for(i = 0; i < len; i = i + 1) {
@@ -949,10 +1320,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     } else {
                         seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
-                        if(indicatorType[valueIter] === "multipleline") {
+                        if(indicatorType[valueIter] === "multipleline" && config.showThreshold) {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
                         } else if(indicatorType[valueIter] === "volumecolumn") {
-                            seriesConfig.threshold = parseFloat(indicator.previousClose);
+                            if(config.showThreshold) {
+                                seriesConfig.threshold = parseFloat(indicator.previousClose);
+                            }
                             seriesConfig.yAxis = new Y.NumericAxisBase(indicator.yAxis);
                         }
                     }
@@ -1268,53 +1641,6 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @private
      */
     _createGraphic: function(config, cb) {
-        /*
-        var graphConfig = config[type],
-            graphic,
-            axisWidth = config.axes.numeric.width,
-            axisHeight = config.axes.date.height,
-            yAxisPosition = config.axes.numeric.position,
-            xAxisPosition = config.axes.date.position,
-            graphX = 0,
-            graphY = config.y,
-            graphWidth = this.get("width"),
-            graphHeight = config.height;
-        if(config.legend) {
-            graphY = graphY + config.legend.height;
-            graphHeight = graphHeight - config.legend.height;
-        }
-        if(!graphConfig || !graphConfig.overlapXAxis) {
-            graphHeight = graphHeight - axisHeight;
-            if(xAxisPosition === "top") {
-                graphY = graphY + axisHeight;
-            }
-        }
-        if(!graphConfig || !graphConfig.overlapYAxis) {
-            graphWidth = graphWidth - axisWidth;
-            if(yAxisPosition === "left") {
-                graphX = graphX + axisWidth;
-            }
-        }
-
-        graphic = new Y.Graphic({
-            render: cb,
-            width: graphWidth,
-            height: graphHeight,
-            x: graphX,
-            y: graphY,
-            autoDraw: false
-        });
-        this._graphics.push(graphic);
-        if(!graphConfig) {
-            config.graph = {};
-        }
-        config.graph.width = graphWidth;
-        config.graph.height = graphHeight;
-        config.graph.x = graphX;
-        config.graph.y = graphY;
-        config.legend.width = graphWidth;
-        config.legend.x = graphX;
-        */
         var graphic = new Y.Graphic({
             render: cb,
             width: config.width,
@@ -1335,7 +1661,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             xAxisPosition = config.axes.date.position,
             graphicX = 0,
             graphicY = config.y,
-            graphicWidth = this.get("width"),
+            graphicWidth = config.width,
             graphicHeight = config.height;
         graphicConfig = config[type] ? this._copyObject(config[type]) : {};
         if(config.legend) {
@@ -1380,38 +1706,56 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 }
             },
             crosshairseries = [],
+            series,
+            drawHorizontal = config.drawHorizontal,
             graph,
-            key;
+            key,
+            crosshairKey,
+            validKeys = config.keys;
         for(key in graphs) {
-            if(graphs.hasOwnProperty(key)) {
+            if(graphs.hasOwnProperty(key)){
+                crosshairKey = key === "quote" ? "close" : key;
                 graph = graphs[key];
-                crosshairseries.push({
-                    marker: {
-                        shape: "circle",
-                        width: config.dotDiameter,
-                        height: config.dotDiameter,
-                        fill: {
-                            color: colors[key === "quote" ? "close" : key]
+                if(Y.Array.indexOf(validKeys, crosshairKey) > -1) {
+                    series = {
+                        marker: {
+                            shape: "circle",
+                            width: config.dotDiameter,
+                            height: config.dotDiameter,
+                            fill: {
+                                color: config.color ? config.color : colors[crosshairKey]
+                            },
+                            stroke: {
+                                weight: 0
+                            }
                         },
-                        stroke: {
-                            weight: 0
-                        }
-                    },
-                    coords: key === "quote" ? graph.get("ycoords").close : graph.get("ycoords")
-                });
-                crosshaircategory.coords = graph.get("xcoords");
+                        coords: key === "quote" ? graph.get("ycoords").close : graph.get("ycoords")
+                    };
+                    if(drawHorizontal) {
+                        series.line = {
+                            stroke: {
+                                color: config.color ? config.color : colors[crosshairKey]
+                            }
+                        };
+
+                    }
+                    crosshairseries.push(series);
+                    crosshaircategory.coords = graph.get("xcoords");
+                }
             }
         }
-        crosshair = new Y.Crosshair({
-            width: config.width,
-            height: config.height,
-            x: config.x,
-            y: config.y,
-            render: cb,
-            series: crosshairseries,
-            category: crosshaircategory
-        });
-        this._crosshairs.push(crosshair);
+        if(crosshairseries.length > 0) {
+            crosshair = new Y.Crosshair({
+                width: config.width,
+                height: config.height,
+                x: config.x,
+                y: config.y,
+                render: cb,
+                series: crosshairseries,
+                category: crosshaircategory
+            });
+            this._crosshairs.push(crosshair);
+        }
         return crosshair;
     },
 
@@ -1507,7 +1851,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             target;
         while(this._crosshairs.length > 0) {
             target = this._crosshairs.pop();
-            target.destroy();
+            if(target) {
+                target.destroy();
+            }
         }
         for(i = 0; i < len; i = i + 1) {
             delete this._charts[i].crosshair;
@@ -1857,8 +2203,6 @@ Y.StockIndicatorsSpark.prototype = {
         "series-marker",
         "series-column",
         "series-candlestick",
-        "series-area",
-        "series-line-multiple",
-        "series-column-volume"
+        "series-area"
     ]
 });
