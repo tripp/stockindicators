@@ -73,8 +73,7 @@ Y.Crosshair.prototype = {
                     graph.xLine = graphic.addShape({
                         shapeRendering: "crispEdges",
                         type: "path",
-                        stroke: graph.stroke,
-                        fill: graph.fill
+                        stroke: graph.line.stroke
                     }).moveTo(0, 0).lineTo(width, 0).end();
                 }
                 if(graph.marker) {
@@ -114,7 +113,7 @@ Y.Crosshair.prototype = {
                     graph.marker.set("transform", "translate(" + x + ", " + y + ")");
                 }
                 if(graph.line) {
-                    graph.line.set("transform", "translate(" + x + ", " + y + ")");
+                    graph.xLine.set("transform", "translateY(" + y + ")");
                 }
             }
         }
@@ -142,25 +141,8 @@ Y.Crosshair.prototype = {
      * @method destroy
      */
     destroy: function() {
-        var series = this._series,
-            yline = this._yline,
-            graph,
-            i,
-            len;
-        if(series) {
-            len = series.length;
-            for(i = 0; i < len; i = i + 1) {
-                graph = series[i];
-                if(graph.marker) {
-                    graph.marker.get("graphic").destroy();
-                }
-                if(graph.line) {
-                    graph.line.get("graphic").destroy();
-                }
-                if(yline) {
-                    yline.get("graphic").destroy();
-                }
-            }
+        if(this.graphic) {
+            this.graphic.destroy();
         }
     }
 };

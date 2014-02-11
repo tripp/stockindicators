@@ -59,7 +59,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 xy = chart.xy,
                 x = pageX - xy[0];
                 crosshair = this._crosshairs[i];
-                crosshair.setTarget(pageX, this._autoDraw);
+                if(crosshair) {
+                    crosshair.setTarget(pageX, this._autoDraw);
+                }
             }
             len = legends.length;
             for(i = 0; i < len; i = i + 1) {
@@ -611,38 +613,56 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 }
             },
             crosshairseries = [],
+            series,
+            drawHorizontal = config.drawHorizontal,
             graph,
-            key;
+            key,
+            crosshairKey,
+            validKeys = config.keys;
         for(key in graphs) {
-            if(graphs.hasOwnProperty(key)) {
+            if(graphs.hasOwnProperty(key)){
+                crosshairKey = key === "quote" ? "close" : key;
                 graph = graphs[key];
-                crosshairseries.push({
-                    marker: {
-                        shape: "circle",
-                        width: config.dotDiameter,
-                        height: config.dotDiameter,
-                        fill: {
-                            color: colors[key === "quote" ? "close" : key]
+                if(Y.Array.indexOf(validKeys, crosshairKey) > -1) {
+                    series = {
+                        marker: {
+                            shape: "circle",
+                            width: config.dotDiameter,
+                            height: config.dotDiameter,
+                            fill: {
+                                color: config.color ? config.color : colors[crosshairKey]
+                            },
+                            stroke: {
+                                weight: 0
+                            }
                         },
-                        stroke: {
-                            weight: 0
-                        }
-                    },
-                    coords: key === "quote" ? graph.get("ycoords").close : graph.get("ycoords")
-                });
-                crosshaircategory.coords = graph.get("xcoords");
+                        coords: key === "quote" ? graph.get("ycoords").close : graph.get("ycoords")
+                    };
+                    if(drawHorizontal) {
+                        series.line = {
+                            stroke: {
+                                color: config.color ? config.color : colors[crosshairKey]
+                            }
+                        };
+
+                    }
+                    crosshairseries.push(series);
+                    crosshaircategory.coords = graph.get("xcoords");
+                }
             }
         }
-        crosshair = new Y.Crosshair({
-            width: config.width,
-            height: config.height,
-            x: config.x,
-            y: config.y,
-            render: cb,
-            series: crosshairseries,
-            category: crosshaircategory
-        });
-        this._crosshairs.push(crosshair);
+        if(crosshairseries.length > 0) {
+            crosshair = new Y.Crosshair({
+                width: config.width,
+                height: config.height,
+                x: config.x,
+                y: config.y,
+                render: cb,
+                series: crosshairseries,
+                category: crosshaircategory
+            });
+            this._crosshairs.push(crosshair);
+        }
         return crosshair;
     },
 
@@ -738,7 +758,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             target;
         while(this._crosshairs.length > 0) {
             target = this._crosshairs.pop();
-            target.destroy();
+            if(target) {
+                target.destroy();
+            }
         }
         for(i = 0; i < len; i = i + 1) {
             delete this._charts[i].crosshair;
