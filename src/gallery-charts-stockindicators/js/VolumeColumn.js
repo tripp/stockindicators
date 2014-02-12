@@ -24,8 +24,8 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
             height,
             selectedPath,
             threshold = this.get("threshold"),
-            hasPositivePath = false,
-            hasNegativePath = false;
+            hasUpPath = false,
+            hasDownPath = false;
         styles.positive.fill.opacity = styles.positive.fill.alpha;
         styles.negative.fill.opacity = styles.negative.fill.alpha;
         positivePath.set(styles.positive);
@@ -35,10 +35,10 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
         for(i = 0; i < len; i = i + 1) {
             if(threshold && valueData[i].close < threshold) {
                 selectedPath = negativePath;
-                hasNegativePath = true;
+                hasDownPath = true;
             } else {
                 selectedPath = positivePath;
-                hasPositivePath = true;
+                hasUpPath = true;
             }
             left = xcoords[i] - halfwidth;
             top = volumeCoords[i];
@@ -46,11 +46,12 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
             if(height > 0 && !isNaN(left) && !isNaN(top)) {
                 selectedPath.drawRect(left, top, width, height);
             }
+            threshold = valueData[i].close;
         }
-        if(hasPositivePath) {
+        if(hasUpPath) {
             positivePath.end();
         }
-        if(hasNegativePath) {
+        if(hasDownPath) {
             negativePath.end();
         }
     },
