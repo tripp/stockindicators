@@ -3,6 +3,7 @@
     "builds": {
         "gallery-charts-stockindicators": {
             "jsfiles": [
+                "IntradayAxis.js",
                 "VolumeColumn.js",
                 "MultipleLineSeries.js",
                 "Crosshair.js",
