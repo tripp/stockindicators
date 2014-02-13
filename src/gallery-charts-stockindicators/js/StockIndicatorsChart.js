@@ -16,6 +16,47 @@
  */
 Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Renderer],  {
     /**
+     * @method initializer
+     * @private
+     */
+    initializer: function() {
+        var cb = this.get("contentBox");
+        cb.setStyle("position", "relative");
+        this._axes = [];
+        this._graphs = [];
+        this._graphics = [];
+        this._crosshairs = [];
+        this._hotspots = [];
+        this._legends = [];
+        this._runTimeline = false;
+        this._onEnterFrame = WINDOW.requestAnimationFrame ||
+                            WINDOW.mozRequestAnimationFrame ||
+                            WINDOW.webkitRequestAnimationFrame ||
+                            WINDOW.msRequestAnimationFrame;
+        this._autoDraw = this._onEnterFrame ? false : true;
+        Y.StockIndicatorsChart.superclass.initializer.apply(this, arguments);
+    },
+
+    /**
+     * @method bindUI
+     * @private
+     */
+    bindUI: function() {
+        var isTouch = ((WINDOW && ("ontouchstart" in WINDOW)) && !(Y.UA.chrome && Y.UA.chrome < 6)),
+            className = ".yui3-hotspot";
+
+            if(isTouch) {
+                Y.on('touchstart', Y.bind(this._eventDispatcher, this), className);
+                Y.on('touchmove', Y.bind(this._eventDispatcher, this), className);
+                Y.on('touchend', Y.bind(this._eventDispatcher, this), className);
+            } else {
+                Y.on('mouseenter', Y.bind(this._eventDispatcher, this), className);
+                Y.on('mousemove', Y.bind(this._eventDispatcher, this), className);
+                Y.on('mouseleave', Y.bind(this._eventDispatcher, this), className);
+            }
+    },
+    
+    /**
      * Draws a charts based on a config object.
      *
      * @method drawCharts
@@ -35,20 +76,122 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     },
 
     /**
+     * Event handler for mouse and touch events.
+     *
+     * @method _eventDispatcher
+     * @param {Object} e Event object.
+     * @private
+     */
+    _eventDispatcher: function(e) {
+        var type = e.type,
+            isTouch = e && e.hasOwnProperty("changedTouches"),
+            pageX = isTouch ? e.changedTouches[0].pageX : e.pageX,
+            pageY = isTouch ? e.changedTouches[0].pageY : e.pageY;
+        if(type === "mouseenter" || type === "touchstart") {
+            this.startTimeline();
+        } else if(type === "mouseleave" || type === "touchend") {
+            this.stopTimeline();
+        }
+        e.halt();
+        /**
+         * Broadcasts when the application has received a mouseenter event.
+         *
+         * @event chartEvent:mouseenter
+         * @preventable false
+         * @param {EventFacade} e Event facade with the following properties:
+         *  <dl>
+         *      <dt>originEvent</dt><dd>The underlying event payload.</dd>
+         *      <dt>pageX</dt><dd>The x location of the event on the page (including scroll)</dd>
+         *      <dt>pageY</dt><dd>The y location of the event on the page (including scroll)</dd>
+         *      <dt>isTouch</dt><dd>Indicates whether the event is a touch event.</dd>
+         *  </dl>
+         */
+        /**
+         * Broadcasts when the application has received a mousemove event.
+         *
+         * @event chartEvent:mousemove
+         * @preventable false
+         * @param {EventFacade} e Event facade with the following properties:
+         *  <dl>
+         *      <dt>originEvent</dt><dd>The underlying event payload.</dd>
+         *      <dt>pageX</dt><dd>The x location of the event on the page (including scroll)</dd>
+         *      <dt>pageY</dt><dd>The y location of the event on the page (including scroll)</dd>
+         *      <dt>isTouch</dt><dd>Indicates whether the event is a touch event.</dd>
+         *  </dl>
+         */
+        /**
+         * Broadcasts when the application has received a mouseleave event.
+         *
+         * @event chartEvent:mouseleave
+         * @preventable false
+         * @param {EventFacade} e Event facade with the following properties:
+         *  <dl>
+         *      <dt>originEvent</dt><dd>The underlying event payload.</dd>
+         *      <dt>pageX</dt><dd>The x location of the event on the page (including scroll)</dd>
+         *      <dt>pageY</dt><dd>The y location of the event on the page (including scroll)</dd>
+         *      <dt>isTouch</dt><dd>Indicates whether the event is a touch event.</dd>
+         *  </dl>
+         */
+        /**
+         * Broadcasts when the application has received a touchstart event.
+         *
+         * @event chartEvent:touchstart
+         * @preventable false
+         * @param {EventFacade} e Event facade with the following properties:
+         *  <dl>
+         *      <dt>originEvent</dt><dd>The underlying event payload.</dd>
+         *      <dt>pageX</dt><dd>The x location of the event on the page (including scroll)</dd>
+         *      <dt>pageY</dt><dd>The y location of the event on the page (including scroll)</dd>
+         *      <dt>isTouch</dt><dd>Indicates whether the event is a touch event.</dd>
+         *  </dl>
+         */
+        /**
+         * Broadcasts when the application has received a touchmove event.
+         *
+         * @event chartEvent:touchmove
+         * @preventable false
+         * @param {EventFacade} e Event facade with the following properties:
+         *  <dl>
+         *      <dt>originEvent</dt><dd>The underlying event payload.</dd>
+         *      <dt>pageX</dt><dd>The x location of the event on the page (including scroll)</dd>
+         *      <dt>pageY</dt><dd>The y location of the event on the page (including scroll)</dd>
+         *      <dt>isTouch</dt><dd>Indicates whether the event is a touch event.</dd>
+         *  </dl>
+         */
+        /**
+         * Broadcasts when the application has received a touchend event.
+         *
+         * @event chartEvent:touchend
+         * @preventable false
+         * @param {EventFacade} e Event facade with the following properties:
+         *  <dl>
+         *      <dt>originEvent</dt><dd>The underlying event payload.</dd>
+         *      <dt>pageX</dt><dd>The x location of the event on the page (including scroll)</dd>
+         *      <dt>pageY</dt><dd>The y location of the event on the page (including scroll)</dd>
+         *      <dt>isTouch</dt><dd>Indicates whether the event is a touch event.</dd>
+         *  </dl>
+         */
+        this.fire("chartEvent:" + type, {
+            originEvent: e,
+            pageX:pageX,
+            pageY:pageY,
+            isTouch: isTouch
+        });
+    },
+    
+    /**
      * Updates the position of the crosshair based on the event payload.
      *
      * @method updatesLegendsCrosshair
      * @param {Object} e Event payload
      */
     updatesLegendsCrosshair: function(e) {
-        e.preventDefault();
         var crosshair,
             crosshairs = this._crosshairs,
             legends = this._legends,
-            isTouch = e && e.hasOwnProperty("changedTouches"),
-            pageX = isTouch ? e.changedTouches[0].pageX : e.pageX,
-            pageY = isTouch ? e.changedTouches[0].pageY : e.pageY,
             len = crosshairs.length,
+            pageX = e.pageX,
+            pageY = e.pageY,
             chart,
             xy,
             x,
@@ -122,31 +265,10 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             this._timelineStart = (new Date()).valueOf();
         }
         if(this._runTimeline && !this._autoDraw) {
-            this._timelineId = this._onEnterFrame.apply(window, [function() {
+            this._timelineId = this._onEnterFrame.apply(WINDOW, [function() {
                 scope.redraw();
             }]);
         }
-    },
-
-    /**
-     *
-     */
-    initializer: function() {
-        var cb = this.get("contentBox");
-        cb.setStyle("position", "relative");
-        this._axes = [];
-        this._graphs = [];
-        this._graphics = [];
-        this._crosshairs = [];
-        this._hotspots = [];
-        this._legends = [];
-        this._runTimeline = false;
-        this._onEnterFrame = window.requestAnimationFrame ||
-                            window.mozRequestAnimationFrame ||
-                            window.webkitRequestAnimationFrame ||
-                            window.msRequestAnimationFrame;
-        this._autoDraw = this._onEnterFrame ? false : true;
-        Y.StockIndicatorsChart.superclass.initializer.apply(this, arguments);
     },
 
     /**
