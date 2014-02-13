@@ -230,9 +230,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                         if(indicatorType[valueIter] === "multipleline" && config.showThreshold) {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
                         } else if(indicatorType[valueIter] === "volumecolumn") {
-                            if(config.showThreshold) {
-                                seriesConfig.threshold = parseFloat(indicator.previousClose);
-                            }
+                            seriesConfig.previousClose = parseFloat(indicator.previousClose);
                             seriesConfig.yAxis = new Y.NumericAxisBase(indicator.yAxis);
                         }
                     }
@@ -267,16 +265,14 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             switch(series.type) {
                 case "volumecolumn" :
                     series.styles = {
-                        positive: {
+                        upPath: {
                             fill: {
-                                color: colors.priceUp,
-                                alpha: 0.5
+                                color: colors.volumeColumnUp
                             }
                         },
-                        negative: {
+                        downPath: {
                             fill: {
-                                color: colors.priceDown,
-                                alpha: 0.5
+                                color: colors.volumeColumnDown
                             }
                         },
                         padding: {

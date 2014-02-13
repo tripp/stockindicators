@@ -9,8 +9,8 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
         var valueData = this.get("yAxis").get("dataProvider"),
             xcoords = this.get("xcoords"),
             volumeCoords = this.get("ycoords"),
-            positivePath = this.get("positivePath"),
-            negativePath = this.get("negativePath"),
+            upPath = this.get("upPath"),
+            downPath = this.get("downPath"),
             len = xcoords.length,
             i,
             styles = this.get("styles"),
@@ -23,21 +23,26 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
             left,
             height,
             selectedPath,
-            threshold = this.get("threshold"),
+            previousClose = this.get("previousClose"),
             hasUpPath = false,
-            hasDownPath = false;
-        styles.positive.fill.opacity = styles.positive.fill.alpha;
-        styles.negative.fill.opacity = styles.negative.fill.alpha;
-        positivePath.set(styles.positive);
-        negativePath.set(styles.negative);
-        positivePath.clear();
-        negativePath.clear();
+            hasDownPath = false,
+            drawInBackground = styles.drawInBackground;
+        styles.upPath.fill.opacity = styles.upPath.fill.alpha;
+        styles.downPath.fill.opacity = styles.downPath.fill.alpha;
+        upPath.set(styles.upPath);
+        downPath.set(styles.downPath);
+        if(drawInBackground) {
+            upPath.toBack();
+            downPath.toBack();
+        }
+        upPath.clear();
+        downPath.clear();
         for(i = 0; i < len; i = i + 1) {
-            if(threshold && valueData[i].close < threshold) {
-                selectedPath = negativePath;
+            if(previousClose && valueData[i].close < previousClose) {
+                selectedPath = downPath;
                 hasDownPath = true;
             } else {
-                selectedPath = positivePath;
+                selectedPath = upPath;
                 hasUpPath = true;
             }
             left = xcoords[i] - halfwidth;
@@ -46,13 +51,13 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
             if(height > 0 && !isNaN(left) && !isNaN(top)) {
                 selectedPath.drawRect(left, top, width, height);
             }
-            threshold = valueData[i].close;
+            previousClose = valueData[i].close;
         }
         if(hasUpPath) {
-            positivePath.end();
+            upPath.end();
         }
         if(hasDownPath) {
-            negativePath.end();
+            downPath.end();
         }
     },
 
@@ -65,8 +70,8 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
      */
     _toggleVisible: function(visible)
     {
-        this.get("positivePath").set("visible", visible);
-        this.get("negativePath").set("visible", visible);
+        this.get("upPath").set("visible", visible);
+        this.get("downPath").set("visible", visible);
     },
 
 
@@ -81,7 +86,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
     _getDefaultStyles: function()
     {
         var styles = {
-            positive: {
+            upPath: {
                 shapeRendering: "crispEdges",
                 fill: {
                     color: "#00aa00",
@@ -93,7 +98,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
                     weight: 0
                 }
             },
-            negative: {
+            downPath: {
                 shapeRendering: "crispEdges",
                 fill: {
                     color: "#aa0000",
@@ -104,7 +109,8 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
                     alpha: 1,
                     weight: 0
                 }
-            }
+            },
+            drawInBackground: true
         };
         return this._mergeStyles(styles, Y.VolumeColumn.superclass._getDefaultStyles());
     }
@@ -140,21 +146,42 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
                 if(!this.get("rendered")) {
                     this.set("rendered", true);
                 }
-                this.set("positivePath", val.addShape({
+                this.set("upPath", val.addShape({
                    type: "path"
                 }));
-                this.set("negativePath", val.addShape({
+                this.set("downPath", val.addShape({
                    type: "path"
                 }));
                 return val;
             }
         },
 
-        positivePath: {},
+        /**
+         * The path element in which columns higher that the previous are drawn.
+         * This attribute is created by the instance.
+         *
+         * @attribute upPath
+         * @type Path
+         */
+        upPath: {},
 
-        negativePath: {},
+        /**
+         * The path element in which columns lower that the previous are drawn.
+         * This attribute is created by the instance.
+         *
+         * @attribute downPath
+         * @type Path
+         */
+        downPath: {},
 
-        threshold: {
+        /**
+         * Attribute for the previous close value. This value represents the last
+         * close value before the start of the rendered data set.
+         *
+         * @attribute previousClose
+         * @type Number
+         */
+        previousClose: {
             lazyAdd: false
         }
     }
