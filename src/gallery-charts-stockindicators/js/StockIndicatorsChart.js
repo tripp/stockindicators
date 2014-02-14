@@ -574,26 +574,6 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         intraday: Y.IntradayAxis
     },
 
-    _adjustForInnerLabels: function(config) {
-        var positionMap = {
-                right: "left",
-                left: "right",
-                top: "bottom",
-                bottom: "top",
-                none: "none",
-                cross: "cross"
-            },
-            styles = config.styles;
-        config.position = positionMap[config.position];
-        if(styles) {
-            if(styles.majorTicks && styles.majorTicks.display) {
-                styles.majorTicks.display = positionMap[styles.majorTicks.display];
-            }
-            config.styles = styles;
-        }
-        return config;
-    },
-
     /**
      * Add the axes to the chart and returns an object literal with references to the
      * `date` and `numeric` axes.
@@ -617,15 +597,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         numericConfig.y = config.y + config.legend.height;
         numericConfig.x = config.width - numericConfig.width;
         numericConfig.height = config.height - dateConfig.height - config.legend.height;
-        if(numericConfig.labelsInGraph) {
-            numericConfig = this._adjustForInnerLabels(numericConfig);
-        }
         dateConfig.render = cb;
         dateConfig.y = config.y + config.height - dateConfig.height;
         dateConfig.width = config.width - numericConfig.width;
-        if(dateConfig.labelsInGraph) {
-            dateConfig = this._adjustForInnerLabels(dateConfig);
-        }
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
