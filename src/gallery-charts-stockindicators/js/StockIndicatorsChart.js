@@ -42,17 +42,21 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @private
      */
     bindUI: function() {
+        this._addEvents();
+    },
+
+    _addEvents: function() {
         var isTouch = ((WINDOW && ("ontouchstart" in WINDOW)) && !(Y.UA.chrome && Y.UA.chrome < 6)),
             className = ".yui3-hotspot";
 
             if(isTouch) {
-                Y.on('touchstart', Y.bind(this._eventDispatcher, this), className);
-                Y.on('touchmove', Y.bind(this._eventDispatcher, this), className);
-                Y.on('touchend', Y.bind(this._eventDispatcher, this), className);
+                this._startHandle = Y.on('touchstart', Y.bind(this._eventDispatcher, this), className);
+                this._moveHandle = Y.on('touchmove', Y.bind(this._eventDispatcher, this), className);
+                this._endHandle = Y.on('touchend', Y.bind(this._eventDispatcher, this), className);
             } else {
-                Y.on('mouseenter', Y.bind(this._eventDispatcher, this), className);
-                Y.on('mousemove', Y.bind(this._eventDispatcher, this), className);
-                Y.on('mouseleave', Y.bind(this._eventDispatcher, this), className);
+                this._startHandle = Y.on('mouseenter', Y.bind(this._eventDispatcher, this), className);
+                this._moveHandle = Y.on('mousemove', Y.bind(this._eventDispatcher, this), className);
+                this._endHandle = Y.on('mouseleave', Y.bind(this._eventDispatcher, this), className);
             }
     },
     
@@ -73,6 +77,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             charts[i] = this.drawChart(configs[i], cb);
         }
         this._charts = charts;
+        this._addEvents();
     },
 
     /**
@@ -971,6 +976,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     }
                 }
             }
+        }
+        if(this._startHandle) {
+            this._startHandle.detach();
+        }
+        if(this._moveHandle) {
+            this._moveHandle.detach();
+        }
+        if(this._endHandle) {
+            this._endHandle.detach();
         }
     },
 
