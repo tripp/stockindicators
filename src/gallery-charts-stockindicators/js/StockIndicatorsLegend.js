@@ -169,10 +169,7 @@ StockIndicatorsLegend.prototype = {
      * @param {Number} pageX
      * @param {Array} dataProvider
      */
-    update: function(pageX, dataProvider, redraw) {
-        var xy = this._xy,
-            x = pageX - xy[0],
-            index = Math.floor(x / this.width * dataProvider.length);
+    update: function(dataProvider, index, redraw) {
         this._dataItem = dataProvider[index];
         if(redraw) {
             this.redraw();

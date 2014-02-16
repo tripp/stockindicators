@@ -191,29 +191,32 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @param {Object} e Event payload
      */
     updatesLegendsCrosshair: function(e) {
-        var crosshair,
-            crosshairs = this._crosshairs,
-            legends = this._legends,
-            len = crosshairs.length,
+        var charts = this._charts,
+            crosshair,
+            legend,
+            len = charts.length,
             pageX = e.pageX,
             pageY = e.pageY,
             chart,
+            dataProvider = this._dataProvider,
+            dataIndex,
             xy,
             x,
             i;
         if(pageX % 1 === 0 && pageY % 1 === 0 && this.curX !== pageX) {
             for(i = 0; i < len; i = i + 1) {
-                chart = this._charts[i];
+                chart = charts[i];
                 xy = chart.xy,
-                x = pageX - xy[0];
-                crosshair = this._crosshairs[i];
+                x = pageX - xy[0],
+                dataIndex = Math.floor(x / chart.graphWidth * dataProvider.length);
+                crosshair = chart.crosshair;
+                legend = chart.legend;
                 if(crosshair) {
                     crosshair.setTarget(pageX, this._autoDraw);
                 }
-            }
-            len = legends.length;
-            for(i = 0; i < len; i = i + 1) {
-                legends[i].update(pageX, this._dataProvider, this._autoDraw);
+                if(legend) {
+                    legend.update(dataProvider, dataIndex, this._autoDraw);
+                }
             }
         }
         this.curX = pageX;
@@ -254,18 +257,24 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      */
     redraw: function() {
         var scope = this,
-            crosshairs = this._crosshairs,
-            legends = this._legends,
+            crosshair,
+            legend,
+            charts = this._charts,
+            chart,
             i,
-            len = crosshairs.length,
+            len = charts.length,
             endTime = (new Date()).valueOf();
         if(endTime >= this._timelineStart + 17) {
             for(i = 0; i < len; i = i + 1) {
-                crosshairs[i].redraw();
-            }
-            len = legends.length;
-            for(i = 0; i < len; i = i + 1) {
-                legends[i].redraw();
+                chart = charts[i];
+                crosshair = chart.crosshair;
+                legend = chart.legend;
+                if(crosshair) {
+                    crosshair.redraw();
+                }
+                if(legend) {
+                    legend.redraw();
+                }
             }
             this._timelineStart = (new Date()).valueOf();
         }
@@ -573,18 +582,17 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         categorybase: Y.CategoryAxisBase,
         intraday: Y.IntradayAxis
     },
-
+    
     /**
      * Add the axes to the chart and returns an object literal with references to the
      * `date` and `numeric` axes.
      *
      * @method _drawAxes
      * @param {Object} config The chart configuration object.
-     * @param {Node} cb Reference to the node in which the axes will be rendered.
      * @return Object
      * @private
      */
-    _drawAxes: function(config, cb) {
+    _drawAxes: function(config) {
         var axes,
             bb,
             numericConfig = config.axes.numeric,
@@ -593,11 +601,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             dateAxis,
             NumericClass = this._axesClassMap[numericConfig.type],
             DateClass = this._axesClassMap[dateConfig.type];
-        numericConfig.render = cb;
         numericConfig.y = config.y + config.legend.height;
         numericConfig.x = config.width - numericConfig.width;
         numericConfig.height = config.height - dateConfig.height - config.legend.height;
-        dateConfig.render = cb;
         dateConfig.y = config.y + config.height - dateConfig.height;
         dateConfig.width = config.width - numericConfig.width;
         numericAxis = new NumericClass(numericConfig);
@@ -765,6 +771,17 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     },
 
     /**
+     * Maps string values to legend classes.
+     *
+     * @property _legenMap
+     * @private
+     */
+    _legendMap: {
+        basic: Y.StockIndicatorsLegend,
+        axis: Y.StockIndicatorsAxisLegend
+    },
+
+    /**
      * Creates a legend for the chart.
      *
      * @method _addLegend
@@ -775,12 +792,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      */
     _addLegend: function(config, cb) {
         var legend,
-             legendConfig = config.legend;
+            legendConfig = config.legend,
+            Legend = this._legendMap[legendConfig.type];
         legendConfig.colors = config.colors;
         legendConfig.render = cb;
         legendConfig.y = config.y;
-        legend = new Y.StockIndicatorsLegend(legendConfig);
-        this._legends.push(legend);
+        if(Legend) {
+            legend = new Legend(legendConfig);
+            this._legends.push(legend);
+        }
         return legend;
     },
 
@@ -815,10 +835,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines"),
             verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
 
-        config.legend.x = graphConfig.x;
-        config.legend.width = graphConfig.width;
 
         axes = this._drawAxes(config, cb);
+        
+        config.legend.x = graphConfig.x;
+        config.legend.width = graphConfig.width;
+       
+        axes.numeric.render(cb);
+        axes.date.render(cb);
+         
         gridlinesGraphic = this._createGraphic(
             this._getGridlinesDimensions(horizontalGridlinesConfig, verticalGridlinesConfig),
             cb
@@ -842,7 +867,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             hotspot: hotspot,
             crosshair: crosshair,
             legend: legend,
-            xy: graphic.getXY()
+            xy: graphic.getXY(),
+            graphWidth: graphConfig.width,
+            graphHeight: graphConfig.height
         };
         //repaint the gridlines and graph
         graphic._redraw();
