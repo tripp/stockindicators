@@ -78,6 +78,8 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
             border = styles.border,
             line = styles.line,
             stroke = fill && border ? border : line,
+            x = this.get("x"),
+            y = this.get("y"),
             cfg;
         startIndex = startIndex || 0;
         interval = interval || 2;
@@ -96,6 +98,8 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
                 path.set("width", w);
                 path.set("height", h);
                 path.set("stroke", stroke);
+                path.set("x", x);
+                path.set("y", y);
                 if(fill) {
                     path.set("fill", fill);
                 }
@@ -106,7 +110,9 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
                     type: "path",
                     width: w,
                     stroke: stroke,
-                    height: h
+                    height: h,
+                    x: x,
+                    y: y
                 };
                 if(fill) {
                     cfg.fill = fill;
@@ -291,6 +297,26 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
 },
 {
     ATTRS: {
+        /**
+         * Indicates the x position of gridlines.
+         *
+         * @attribute x
+         * @type Number
+         */
+        x: {
+            value: 0
+        },
+
+        /**
+         * Indicates the y position of gridlines.
+         *
+         * @attribute y
+         * @type Number
+         */
+        y: {
+            value: 0
+        },
+        
         /**
          * Indicates the direction of the gridline.
          *

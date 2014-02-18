@@ -105,6 +105,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
                 styles[key] = cfg.styles[key];
             }
         }
+        this._y = cfg.y;
         this._contentBox = cfg.render;
         this._styles = styles;
         this._maximum = axis.get("maximum");
@@ -190,7 +191,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
         maxLabelWidth = parseFloat(maxLabel.offsetWidth);
         minLabelWidth = parseFloat(minLabel.offsetWidth);
         height = Math.max(parseFloat(maxLabel.offsetHeight), parseFloat(minLabel.offsetHeight));
-        if(maxLabelWidth  >= minLabelWidth ) {
+        if(maxLabelWidth >= minLabelWidth ) {
             axis._removeChildren(minLabel);
             Y.Event.purgeElement(minLabel, true);
             minLabel.parentNode.removeChild(minLabel);
@@ -202,7 +203,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
             width = minLabelWidth;
         }
         width = Math.max(parseFloat(maxLabel.offsetWidth), parseFloat(minLabel.offsetWidth));
-        borderRightWidth = (height/2) + "px";
+        borderRightWidth = (height/13 * 7) + "px";
         borderTopWidth = parseFloat(borderRightWidth) + "px";
         borderBottomWidth = borderTopWidth;
 
@@ -221,7 +222,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
             height: height,
             arrow: {
                 borderRightWidth: borderRightWidth,
-                borderBottomWidth: borderBottomWidth ,
+                borderBottomWidth: borderBottomWidth,
                 borderTopWidth: borderTopWidth
             }
         };
@@ -254,6 +255,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
             text = this._labelFunction.apply(this, [value, this._labelFormat]),
             ycoord = previousClose.ycoord ||
                 axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
+        ycoord = ycoord + this._y;
         label.id = previousClose.id || className;
         if(previousClose.className) {
             className = className + " " + previousClose.className;
@@ -405,7 +407,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
                 }
                 value = dataItem[key];
                 text = this._labelFunction.apply(this, [value, this._labelFormat]),
-                ycoord = axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
+                ycoord = this._y + axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
                 label.appendChild(DOCUMENT.createTextNode(text));
                 container.style.position = "absolute";
                 container.style.left = (this._contentWidth - this.itemWidth) + "px";
@@ -435,7 +437,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
         this._dataItem = props.dataProvider[props.dataIndex];
         if(this._dataItem) {
             item.value = this._dataItem[item.key];
-            item.ycoord = this._axis._getCoordFromValue(
+            item.ycoord = this._y + this._axis._getCoordFromValue(
                 this._minimum,
                 this._maximum,
                 this.height,

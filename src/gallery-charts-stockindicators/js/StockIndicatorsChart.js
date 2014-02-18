@@ -553,6 +553,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 graphic: graphic,
                 direction: "horizontal",
                 axis: axes.numeric,
+                x: horizontalGridlinesConfig.x,
+                y: horizontalGridlinesConfig.y,
                 styles: horizontalGridlinesConfig
             });
         }
@@ -598,7 +600,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @return Object
      * @private
      */
-    _drawAxes: function(config) {
+    _drawAxes: function(config, graphicConfig) {
         var axes,
             bb,
             numericConfig = config.axes.numeric,
@@ -607,11 +609,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             dateAxis,
             NumericClass = this._axesClassMap[numericConfig.type],
             DateClass = this._axesClassMap[dateConfig.type];
-        numericConfig.y = config.y + config.legend.height;
+        numericConfig.y = graphicConfig.y;
         numericConfig.x = config.width - numericConfig.width;
-        numericConfig.height = config.height - dateConfig.height - config.legend.height;
+        numericConfig.height = graphicConfig.height;
+        dateConfig.x = graphicConfig.x;
         dateConfig.y = config.y + config.height - dateConfig.height;
-        dateConfig.width = config.width - numericConfig.width;
+        dateConfig.width = graphicConfig.width;
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
@@ -619,7 +622,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         bb.setStyle("top", (config.y + config.height - dateConfig.height) + "px");
         bb = numericAxis.get("boundingBox");
         bb.setStyle("left", numericConfig.x + "px");
-        bb.setStyle("top", (config.y + config.legend.height) + "px");
+        bb.setStyle("top", numericConfig.y + "px");
         axes = {
             numeric: numericAxis,
             date: dateAxis
@@ -676,12 +679,32 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             axisHeight = config.axes.date.height,
             yAxisPosition = config.axes.numeric.position,
             xAxisPosition = config.axes.date.position,
-            graphicX = 0,
-            graphicY = config.y,
+            graphicX,
+            graphicY,
             graphicWidth = config.width,
-            graphicHeight = config.height;
+            graphicHeight = config.height,
+            margin;
         graphicConfig = config[type] ? this._copyObject(config[type]) : {};
-        if(config.legend) {
+        graphicX = graphicConfig.x || 0;
+        graphicY = graphicConfig.y || config.y;
+        margin = graphicConfig.margin;
+        if(margin) {
+            if(margin.top) {
+                graphicY = graphicY + margin.top;
+                graphicHeight = graphicHeight - margin.top;
+            }
+            if(margin.left) {
+                graphicX = graphicX + margin.left;
+                graphicWidth = graphicWidth - margin.left;
+            }
+            if(margin.bottom) {
+                graphicHeight = graphicHeight - margin.bottom;
+            }
+            if(margin.right) {
+                graphicWidth = graphicWidth - margin.right;
+            }
+        }
+        if(config.legend && config.legend.type !== "axis") {
             graphicY = graphicY + config.legend.height;
             graphicHeight = graphicHeight - config.legend.height;
         }
@@ -802,7 +825,6 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             Legend = this._legendMap[legendConfig.type];
         legendConfig.colors = config.colors;
         legendConfig.render = cb;
-        legendConfig.y = config.y;
         if(Legend) {
             legend = new Legend(legendConfig);
             this._legends.push(legend);
@@ -838,10 +860,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair,
             legend,
             graphConfig = this._getGraphicDimensions(config, "graphs"),
-            horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines"),
-            verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
+            horizontalGridlinesConfig,
+            verticalGridlinesConfig;
+        config.horizontalGridlines.y = graphConfig.y;
+        config.verticalGridlines.x = graphConfig.x;
 
-        axes = this._drawAxes(config, cb);
+        horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines");
+        verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
+
+        axes = this._drawAxes(config, graphConfig, cb);
         axes.numeric.render(cb);
         axes.date.render(cb);
 
@@ -861,9 +888,11 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         );
         if(config.legend.type === "axis") {
             config.legend.axis = axes.numeric;
+            config.legend.y = graphConfig.y;
             config.legend.contentWidth = this.get("width");
         } else {
             config.legend.x = graphConfig.x;
+            config.legend.y = config.y;
             config.legend.width = graphConfig.width;
         }
         legend = this._addLegend(config, cb);
