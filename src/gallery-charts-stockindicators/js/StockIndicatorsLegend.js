@@ -169,8 +169,8 @@ StockIndicatorsLegend.prototype = {
      * @param {Number} pageX
      * @param {Array} dataProvider
      */
-    update: function(dataProvider, index, redraw) {
-        this._dataItem = dataProvider[index];
+    update: function(props, redraw) {
+        this._dataItem = props.dataProvider[props.index];
         if(redraw) {
             this.redraw();
         }

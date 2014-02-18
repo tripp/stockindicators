@@ -59,7 +59,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 this._endHandle = Y.on('mouseleave', Y.bind(this._eventDispatcher, this), className);
             }
     },
-    
+
     /**
      * Draws a charts based on a config object.
      *
@@ -183,7 +183,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             isTouch: isTouch
         });
     },
-    
+
     /**
      * Updates the position of the crosshair based on the event payload.
      *
@@ -215,7 +215,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     crosshair.setTarget(pageX, this._autoDraw);
                 }
                 if(legend) {
-                    legend.update(dataProvider, dataIndex, this._autoDraw);
+                    legend.update({
+                        dataProvider: dataProvider,
+                        dataIndex: dataIndex,
+                        pageX: pageX,
+                        pageY: pageY
+                    }, this._autoDraw);
                 }
             }
         }
@@ -363,7 +368,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     } else {
                         seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
-                        if(indicatorType[valueIter] === "multipleline" && config.showThreshold) {
+                        if(indicatorType[valueIter] === "multipleline" && config.threshold) {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
                         } else if(indicatorType[valueIter] === "volumecolumn") {
                             seriesConfig.previousClose = parseFloat(indicator.previousClose);
@@ -427,7 +432,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 case "multipleline" :
                     series.styles = {
                         weight: config.lineWidth,
-                        colors: [colors[series.yKey], colors.priceDown]
+                        colors: config.range === "1d" ? [colors.quoteLineUp, colors.quoteLineDown] : [colors.quoteLine],
+                        threshold: config.threshold
                     };
                 break;
                 case "candlestick" :
@@ -582,7 +588,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         categorybase: Y.CategoryAxisBase,
         intraday: Y.IntradayAxis
     },
-    
+
     /**
      * Add the axes to the chart and returns an object literal with references to the
      * `date` and `numeric` axes.
@@ -835,15 +841,10 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines"),
             verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
 
-
         axes = this._drawAxes(config, cb);
-        
-        config.legend.x = graphConfig.x;
-        config.legend.width = graphConfig.width;
-       
         axes.numeric.render(cb);
         axes.date.render(cb);
-         
+
         gridlinesGraphic = this._createGraphic(
             this._getGridlinesDimensions(horizontalGridlinesConfig, verticalGridlinesConfig),
             cb
@@ -858,6 +859,13 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             graphs,
             cb
         );
+        if(config.legend.type === "axis") {
+            config.legend.axis = axes.numeric;
+            config.legend.contentWidth = this.get("width");
+        } else {
+            config.legend.x = graphConfig.x;
+            config.legend.width = graphConfig.width;
+        }
         legend = this._addLegend(config, cb);
         chart = {
             axes: axes,

@@ -1,4 +1,5 @@
-
+    var WINDOW = Y.config.win,
+        DOCUMENT = Y.config.doc;
     Y.Axis.prototype.getLabel = function(styles)
     {
         var i,
@@ -9,8 +10,7 @@
                 margin: "margin",
                 alpha: "alpha",
                 align: "align"
-            },
-            DOCUMENT = Y.config.doc;
+            };
         if(labelCache && labelCache.length > 0)
         {
             label = labelCache.shift();
@@ -40,7 +40,32 @@
         }
         return label;
     };
-    
+   
+    Y.Axis.prototype._setCanvas = function() {
+        var cb = this.get("contentBox"),
+            bb = this.get("boundingBox"),
+            p = this.get("position"),
+            pn = this._parentNode,
+            w = this.get("width"),
+            h = this.get("height");
+        bb.setStyle("position", "absolute");
+        w = w ? w + "px" : pn.getStyle("width");
+        h = h ? h + "px" : pn.getStyle("height");
+        if(p === "top" || p === "bottom")
+        {
+            cb.setStyle("width", w);
+        }
+        else
+        {
+            cb.setStyle("height", h);
+        }
+        cb.setStyle("position", "relative");
+        cb.setStyle("left", "0px");
+        cb.setStyle("top", "0px");
+        this.set("graphic", new Y.Graphic());
+        this.get("graphic").render(cb);
+    };
+
     Y.LeftAxisLayout.prototype.positionLabel = function(label, pt, styles, i)
     {
         var host = this,

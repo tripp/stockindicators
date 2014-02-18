@@ -1,5 +1,3 @@
-var WINDOW = Y.config.win;
-
 /**
  * Contains logic for rendering an intraday axis.
  */
