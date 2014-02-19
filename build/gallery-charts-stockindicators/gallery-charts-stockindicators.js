@@ -1926,7 +1926,6 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                             WINDOW.webkitRequestAnimationFrame ||
                             WINDOW.msRequestAnimationFrame;
         this._autoDraw = this._onEnterFrame ? false : true;
-        Y.StockIndicatorsChart.superclass.initializer.apply(this, arguments);
     },
 
     /**
@@ -1937,6 +1936,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         this._addEvents();
     },
 
+    /**
+     * Adds event listeners.
+     *
+     * @method _addEvents
+     * @private
+     */
     _addEvents: function() {
         var isTouch = ((WINDOW && ("ontouchstart" in WINDOW)) && !(Y.UA.chrome && Y.UA.chrome < 6)),
             className = ".yui3-hotspot";
