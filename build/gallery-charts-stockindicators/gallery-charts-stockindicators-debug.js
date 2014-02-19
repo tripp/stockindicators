@@ -690,12 +690,14 @@ Y.Crosshair.prototype = {
             category = cfg.category,
             yline,
             i,
-            len = series.length;
+            len = series.length,
+            graphX = cfg.graphX - cfg.x,
+            graphY = cfg.graphY - cfg.y;
         yline = graphic.addShape({
             shapeRendering: "crispEdges",
             type: "path",
             stroke: category.stroke
-        }).moveTo(0, 0).lineTo(0, height).end();
+        }).moveTo(graphX, 0).lineTo(graphX, height).end();
         this._xcoords = category.coords;
         this._yline = yline;
         this.width = cfg.width;
@@ -708,11 +710,11 @@ Y.Crosshair.prototype = {
                         shapeRendering: "crispEdges",
                         type: "path",
                         stroke: graph.line.stroke
-                    }).moveTo(0, 0).lineTo(width, 0).end();
+                    }).moveTo(0, graphY).lineTo(width, graphY).end();
                 }
                 if(graph.marker) {
-                    graph.marker.y = graph.marker.height/-2;
-                    graph.marker.x = graph.marker.width/-2;
+                    graph.marker.y = graphY - graph.marker.height/2;
+                    graph.marker.x = graphX - graph.marker.width/2;
                     graph.marker.type = graph.marker.type || graph.marker.shape;
                     graph.marker = graphic.addShape(graph.marker);
                 }
@@ -2687,6 +2689,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 height: config.height,
                 x: config.x,
                 y: config.y,
+                graphX: config.graphX,
+                graphY: config.graphY,
                 render: cb,
                 series: crosshairseries,
                 category: crosshaircategory
@@ -2757,6 +2761,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair,
             legend,
             graphConfig = this._getGraphicDimensions(config, "graphs"),
+            crosshairConfig,
             horizontalGridlinesConfig,
             verticalGridlinesConfig;
         config.horizontalGridlines.y = graphConfig.y;
@@ -2777,8 +2782,11 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         gridlines = this._drawGridlines(horizontalGridlinesConfig, verticalGridlinesConfig, axes, gridlinesGraphic);
         graphs = this._drawGraphs(config, axes, graphic);
         hotspot = this._drawHotspot(graphConfig, cb);
+        crosshairConfig = this._mergeStyles(this._getGraphicDimensions(config, "crosshair"), config.crosshair);
+        crosshairConfig.graphX = graphConfig.x;
+        crosshairConfig.graphY = graphConfig.y;
         crosshair = this._addCrosshair(
-            this._mergeStyles(graphConfig, config.crosshair),
+            crosshairConfig,
             config.colors,
             graphs,
             cb
