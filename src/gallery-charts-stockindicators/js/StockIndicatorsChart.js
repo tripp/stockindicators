@@ -795,6 +795,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 height: config.height,
                 x: config.x,
                 y: config.y,
+                graphX: config.graphX,
+                graphY: config.graphY,
                 render: cb,
                 series: crosshairseries,
                 category: crosshaircategory
@@ -865,6 +867,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair,
             legend,
             graphConfig = this._getGraphicDimensions(config, "graphs"),
+            crosshairConfig,
             horizontalGridlinesConfig,
             verticalGridlinesConfig;
         config.horizontalGridlines.y = graphConfig.y;
@@ -885,8 +888,11 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         gridlines = this._drawGridlines(horizontalGridlinesConfig, verticalGridlinesConfig, axes, gridlinesGraphic);
         graphs = this._drawGraphs(config, axes, graphic);
         hotspot = this._drawHotspot(graphConfig, cb);
+        crosshairConfig = this._mergeStyles(this._getGraphicDimensions(config, "crosshair"), config.crosshair);
+        crosshairConfig.graphX = graphConfig.x;
+        crosshairConfig.graphY = graphConfig.y;
         crosshair = this._addCrosshair(
-            this._mergeStyles(graphConfig, config.crosshair),
+            crosshairConfig,
             config.colors,
             graphs,
             cb

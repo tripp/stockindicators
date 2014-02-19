@@ -56,12 +56,14 @@ Y.Crosshair.prototype = {
             category = cfg.category,
             yline,
             i,
-            len = series.length;
+            len = series.length,
+            graphX = cfg.graphX - cfg.x,
+            graphY = cfg.graphY - cfg.y;
         yline = graphic.addShape({
             shapeRendering: "crispEdges",
             type: "path",
             stroke: category.stroke
-        }).moveTo(0, 0).lineTo(0, height).end();
+        }).moveTo(graphX, 0).lineTo(graphX, height).end();
         this._xcoords = category.coords;
         this._yline = yline;
         this.width = cfg.width;
@@ -74,11 +76,11 @@ Y.Crosshair.prototype = {
                         shapeRendering: "crispEdges",
                         type: "path",
                         stroke: graph.line.stroke
-                    }).moveTo(0, 0).lineTo(width, 0).end();
+                    }).moveTo(0, graphY).lineTo(width, graphY).end();
                 }
                 if(graph.marker) {
-                    graph.marker.y = graph.marker.height/-2;
-                    graph.marker.x = graph.marker.width/-2;
+                    graph.marker.y = graphY - graph.marker.height/2;
+                    graph.marker.x = graphX - graph.marker.width/2;
                     graph.marker.type = graph.marker.type || graph.marker.shape;
                     graph.marker = graphic.addShape(graph.marker);
                 }
