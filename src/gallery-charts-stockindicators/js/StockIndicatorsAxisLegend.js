@@ -406,8 +406,12 @@ Y.StockIndicatorsAxisLegend.prototype = {
                     }
                 }
                 if(background) {
-                    if(key === "close" && item.range === "1d" && Y.Lang.isArray(background)) {
-                        background = value < this._previousClose.value && background.length > 1  ? background[1] : background[0];
+                    if(Y.Lang.isArray(background)) {
+                        if(key === "close" && item.range === "1d") {
+                            background = value < this._previousClose.value && background.length > 1  ? background[1] : background[0];
+                        } else {
+                            background = background[0];
+                        }
                     }
                     label.style.background = background;
                     arrow.style.borderRightColor = background;
