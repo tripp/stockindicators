@@ -112,10 +112,20 @@ Y.Crosshair.prototype = {
                 graph = series[i];
                 y = graph.coords[index];
                 if(graph.marker) {
-                    graph.marker.set("transform", "translate(" + x + ", " + y + ")");
+                    if(Y.Lang.isNumber(y)) {
+                        graph.marker.set("visible", true);
+                        graph.marker.set("transform", "translate(" + x + ", " + y + ")");
+                    } else {
+                        graph.marker.set("visible", false);
+                    }
                 }
                 if(graph.line) {
-                    graph.xLine.set("transform", "translateY(" + y + ")");
+                    if(Y.Lang.isNumber(y)) {
+                        graph.xLine.set("visible", true);
+                        graph.xLine.set("transform", "translateY(" + y + ")");
+                    } else {
+                        graph.xLine.set("visible", false);
+                    }
                 }
             }
         }
