@@ -746,10 +746,20 @@ Y.Crosshair.prototype = {
                 graph = series[i];
                 y = graph.coords[index];
                 if(graph.marker) {
-                    graph.marker.set("transform", "translate(" + x + ", " + y + ")");
+                    if(Y.Lang.isNumber(y)) {
+                        graph.marker.set("visible", true);
+                        graph.marker.set("transform", "translate(" + x + ", " + y + ")");
+                    } else {
+                        graph.marker.set("visible", false);
+                    }
                 }
                 if(graph.line) {
-                    graph.xLine.set("transform", "translateY(" + y + ")");
+                    if(Y.Lang.isNumber(y)) {
+                        graph.xLine.set("visible", true);
+                        graph.xLine.set("transform", "translateY(" + y + ")");
+                    } else {
+                        graph.xLine.set("visible", false);
+                    }
                 }
             }
         }
@@ -1708,7 +1718,6 @@ Y.StockIndicatorsAxisLegend.prototype = {
         interactiveItem.label = label;
         this._labels.push(container);
         return interactiveItem;
-
     },
 
     /**
@@ -1736,13 +1745,18 @@ Y.StockIndicatorsAxisLegend.prototype = {
             label,
             background,
             dataProvider = this._dataProvider,
-            dataItem = dataProvider[dataProvider.length -1],
+            lastIndex,
             value,
             ycoord,
             text,
             contentBox = this._contentBox._node;
         for(key in indicatorItems) {
             if(indicatorItems.hasOwnProperty(key)) {
+                lastIndex = dataProvider.length - 1;
+                while(!Y.Lang.isNumber(dataProvider[lastIndex][key])) {
+                    lastIndex = lastIndex - 1;
+                }
+                value = dataProvider[lastIndex][key];
                 item = indicatorItems[key];
                 container = DOCUMENT.createElement("div");
                 arrow = DOCUMENT.createElement("span");
@@ -1765,10 +1779,12 @@ Y.StockIndicatorsAxisLegend.prototype = {
                     }
                 }
                 if(background) {
+                    if(key === "close" && item.range === "1d" && Y.Lang.isArray(background)) {
+                        background = value < this._previousClose.value && background.length > 1  ? background[1] : background[0];
+                    }
                     label.style.background = background;
                     arrow.style.borderRightColor = background;
                 }
-                value = dataItem[key];
                 text = this._labelFunction.apply(this, [value, this._labelFormat]),
                 ycoord = this._y + axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
                 label.appendChild(DOCUMENT.createTextNode(text));
