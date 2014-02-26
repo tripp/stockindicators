@@ -66,9 +66,6 @@ Y.StockIndicatorsPrinter.prototype = {
 
         canvas.width = this._width;
         canvas.height = this._height;
-        canvas.style.left = "0px";
-        canvas.style.top = (this._height + 50) + "px";
-        canvas.style.position = "absolute";
         for(i = 0; i < len; i = i + 1) {
             chart = charts[i];
             gridlinesConfigs.push(chart.gridlinesConfig);
@@ -144,7 +141,6 @@ Y.StockIndicatorsPrinter.prototype = {
         }
         len = graphs.length;
         for(i = 0; i < len; i = i + 1) {
-            console.log(len);
             graph = graphs[i];
             if(graph) {
                 x = graph.get("x");

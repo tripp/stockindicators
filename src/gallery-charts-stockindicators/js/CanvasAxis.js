@@ -1,42 +1,4 @@
-    Y.CanvasAxis = Y.Base.create("canvasAxis", Y.AxisBase, [Y.Renderer], {
-        /**
-         * Calcuates the width or height of an axis depending on its direction.
-         *
-         * @method getLength
-         * @return Number
-         * @private
-         */
-        getLength: Y.Axis.prototype.getLength,
-
-        /**
-         * Generates the properties necessary for rotating and positioning a text field.
-         *
-         * @method _getTextRotationProps
-         * @param {Object} styles properties for the text field
-         * @return Object
-         * @private
-         */
-        _getTextRotationProps: Y.Axis.prototype._getTextRotationProps,
-
-        /**
-         * Maps key values to classes containing layout algorithms
-         *
-         * @property _layoutClasses
-         * @type Object
-         * @private
-         */
-        _layoutClasses: Y.Axis.prototype._layoutClasses,
-
-        /**
-         * Gets the default value for the `styles` attribute. Overrides
-         * base implementation.
-         *
-         * @method _getDefaultStyles
-         * @return Object
-         * @protected
-         */
-        _getDefaultStyles: Y.Axis.prototype._getDefaultStyles,
-
+    Y.CanvasAxis = Y.Base.create("canvasAxis", Y.AxisBase, [Y.Renderer], Y.merge(Y.Axis.prototype, {
         /**
          * Rotates and positions a text field.
          *
@@ -51,30 +13,6 @@
                 y = props.y + this._yOffset;
             this._context.fillText(label, x, y);
         },
-        /**
-         * Returns the total number of majorUnits that will appear on an axis.
-         *
-         * @method getTotalMajorUnits
-         * @return Number
-         */
-        getTotalMajorUnits: Y.Axis.prototype.getTotalMajorUnits,
-
-        /**
-         * Calculates and returns a value based on the number of labels and the index of
-         * the current label.
-         *
-         * @method getLabelByIndex
-         * @param {Number} i Index of the label.
-         * @param {Number} l Total number of labels.
-         * @return String
-         */
-        getLabelByIndex: Y.Axis.prototype.getLabelByIndex,
-
-        _removeChildren: Y.Axis.prototype._removeChildren,
-
-        getLineEnd: Y.Axis.prototype.getLineEnd,
-
-        getLabel: Y.Axis.prototype.getLabel,
 
         /**
          * Draws an axis.
@@ -331,6 +269,12 @@
             }
         },
 
+        /**
+         * Destructor implementation for the CanvasAxis class.
+         *
+         * @method destructor
+         * @protected
+         */
         destructor: function() {
             if(this._path) {
                 if(this._context) {
@@ -343,21 +287,36 @@
                 }
                 this._path.parentNode.removeChild(this._path);
             }
-        },
-
-        _setText: Y.Axis.prototype._setText,
-
-        _formatLabel: Y.Axis.prototype._formatLabel
-    }, {
+        }
+    }), {
         ATTRS: Y.merge(Y.Axis.ATTRS, {
+            /**
+             * Indicates the x position of axis.
+             *
+             * @attribute x
+             * @type Number
+             */
             x: {
                 value: 0
             },
 
+            /**
+             * Indicates the y position of axis.
+             *
+             * @attribute y
+             * @type Number
+             */
             y: {
                 value: 0
             },
 
+            /**
+             * The calculated width of the axis.
+             *
+             * @attribute calculatedWidth
+             * @type Number
+             * @readOnly
+             */
             calculatedWidth: {
                 setter: function(val)
                 {
@@ -368,6 +327,13 @@
                 }
             },
 
+            /**
+             * The calculated height of the axis.
+             *
+             * @attribute calculatedHeight
+             * @type Number
+             * @readOnly
+             */
             calculatedHeight: {
                 setter: function(val)
                 {
@@ -380,6 +346,12 @@
 
             render: {},
 
+            /**
+             * The element in which the axis will be attached
+             *
+             * @attribute contentBox
+             * @type Node|HTMLElement
+             */
             contentBox: {
                 getter: function() {
                     return this.get("render") || Y.one(DOCUMENT.body);
@@ -400,7 +372,7 @@
                     var node;
                     if(!this._path)
                     {
-                        this._path = document.createElement("canvas");
+                        this._path = DOCUMENT.createElement("canvas");
                         this._path.style.position = "absolute";
                         node = this.get("render");
                         if(node) {

@@ -291,7 +291,7 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
     },
 
     /**
-     * Destructor implementation for the CartesianSeries class. Calls destroy on all Graphic instances.
+     * Destructor implementation for the MultipleLineCanvasSeries class.
      *
      * @method destructor
      * @protected

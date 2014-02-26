@@ -140,7 +140,7 @@ Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
     },
 
     /**
-     * Destructor implementation for the CartesianSeries class. Calls destroy on all Graphic instances.
+     * Destructor implementation for the VolumeColumnCanvas class.
      *
      * @method destructor
      * @protected

@@ -919,7 +919,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     /**
      * Gets the configuration objects needed to instantiate the gridlines instances.
      *
-     * @method _getGridlinesConfig 
+     * @method _getGridlinesConfig
      * @param {Object} horizontalGridlines Configuration object for the horizontal gridlines.
      * @param {Object} verticalGridlines Configuration object for the vertical gridlines.
      * @return Object
@@ -985,7 +985,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         axes = this._drawAxes(axesConfig.date, axesConfig.numeric, cb);
         axes.numeric.render(cb);
         axes.date.render(cb);
-        
+
         gridlinesConfig = this._getGridlinesConfig(
             this._getGraphicDimensions(config, "horizontalGridlines"),
             this._getGraphicDimensions(config, "verticalGridlines")
