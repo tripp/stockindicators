@@ -42,7 +42,7 @@ YUI.add('gallery-charts-stockindicators', function (Y, NAME) {
         }
         return label;
     };
-   
+
     Y.Axis.prototype._setCanvas = function() {
         var cb = this.get("contentBox"),
             bb = this.get("boundingBox"),
@@ -161,26 +161,14 @@ YUI.add('gallery-charts-stockindicators', function (Y, NAME) {
         props.y = Math.round(topOffset);
         this._rotate(label, props);
     };
- 
-/**
- * Contains logic for rendering an intraday axis.
- */
-Y.IntradayAxis = function() {
-    Y.IntradayAxis.superclass.constructor.apply(this, arguments);
+
+Y.IntradayAxisBase = function() {
+    Y.IntradayAxisBase.superclass.constructor.apply(this, arguments);
 };
-Y.IntradayAxis.ATTRS = {
-    /**
-     * The granularity of the data in the axis.
-     *
-     * @attribute dataGranularity
-     * @type String
-     */
-    dataGranularity: {
-        lazyAdd: false
-    }
-};
-Y.IntradayAxis.NAME = "intradayAxis";
-Y.extend(Y.IntradayAxis, Y.CategoryAxis, {
+
+Y.IntradayAxisBase.NAME = "intradayAxisBase";
+
+Y.extend(Y.IntradayAxisBase, Y.CategoryAxisBase, {
     /**
      * Getter method for maximum attribute.
      *
@@ -208,7 +196,440 @@ Y.extend(Y.IntradayAxis, Y.CategoryAxis, {
             }
         }
     }
+}, {
+    ATTRS: {
+        /**
+         * The granularity of the data in the axis.
+         *
+         * @attribute dataGranularity
+         * @type String
+         */
+        dataGranularity: {
+            lazyAdd: false
+        }
+    }
 });
+
+/**
+ * Contains logic for rendering an intraday axis.
+ */
+Y.IntradayAxis = Y.Base.create("intradayAxis", Y.CategoryAxis, [Y.IntradayAxisBase]);
+    Y.CanvasAxis = Y.Base.create("canvasAxis", Y.AxisBase, [Y.Renderer], Y.merge(Y.Axis.prototype, {
+        /**
+         * Rotates and positions a text field.
+         *
+         * @method _rotate
+         * @param {HTMLElement} label text field to rotate and position
+         * @param {Object} props properties to be applied to the text field.
+         * @private
+         */
+        _rotate: function(label, props)
+        {
+            var x = props.x + this._xOffset,
+                y = props.y + this._yOffset;
+            this._context.fillText(label, x, y);
+        },
+
+        /**
+         * Draws an axis.
+         *
+         * @method _drawAxis
+         * @private
+         */
+        _drawAxis: function () {
+            if(this._layout)
+            {
+                var styles = this.get("styles"),
+                    margin = styles.margin,
+                    marginLeft,
+                    marginRight,
+                    marginTop,
+                    marginBottom,
+                    line = styles.line,
+                    labelStyles = styles.label,
+                    majorTickStyles = styles.majorTicks,
+                    drawTicks = majorTickStyles.display !== "none",
+                    len,
+                    i = 0,
+                    layout = this._layout,
+                    layoutLength,
+                    lineStart,
+                    lineEnd,
+                    label,
+                    labelWidth,
+                    labelHeight,
+                    labelFunction = this.get("labelFunction"),
+                    labelFunctionScope = this.get("labelFunctionScope"),
+                    labelFormat = this.get("labelFormat"),
+                    path = this.get("path"),
+                    pathContext = path.getContext("2d"),
+                    explicitlySized,
+                    position = this.get("position"),
+                    labelData,
+                    labelValues,
+                    formattedValue,
+                    formattedValues = [],
+                    point,
+                    points,
+                    firstPoint,
+                    lastPoint,
+                    firstLabel,
+                    lastLabel,
+                    staticCoord,
+                    dynamicCoord,
+                    edgeOffset,
+                    defaultMargins = layout._getDefaultMargins(),
+                    explicitLabels = this._labelValuesExplicitlySet ? this.get("labelValues") : null,
+                    direction = (position === "left" || position === "right") ? "vertical" : "horizontal";
+                if(margin) {
+                    marginLeft = Y.Lang.isNumber(margin.left) ? margin.left : 0;
+                    marginRight = Y.Lang.isNumber(margin.right) ? margin.right : 0;
+                    marginTop = Y.Lang.isNumber(margin.top) ? margin.top : 0;
+                    marginBottom = Y.Lang.isNumber(margin.bottom) ? margin.bottom : 0;
+                }
+                //need to defaultMargins method to the layout classes.
+                for(i in defaultMargins)
+                {
+                    if(defaultMargins.hasOwnProperty(i))
+                    {
+                        labelStyles.margin[i] = labelStyles.margin[i] === undefined ? defaultMargins[i] : labelStyles.margin[i];
+                    }
+                }
+                this._context = pathContext;
+                this._labelWidths = [];
+                this._labelHeights = [];
+                this._labels = [];
+                pathContext.clearRect(0, 0, path.width, path.height);
+                pathContext.strokeStyle = line.color;
+                pathContext.strokeWidth = line.weight;
+                this._labelRotationProps = this._getTextRotationProps(labelStyles);
+                this._labelRotationProps.transformOrigin = layout._getTransformOrigin(this._labelRotationProps.rot);
+                layout.setTickOffsets.apply(this);
+                layoutLength = this.getLength();
+
+                len = this.getTotalMajorUnits();
+                edgeOffset = this.getEdgeOffset(len, layoutLength);
+                this.set("edgeOffset", edgeOffset);
+                lineStart = layout.getLineStart.apply(this);
+                lineEnd = this.getLineEnd(lineStart);
+
+                if(direction === "vertical")
+                {
+                    staticCoord = "x";
+                    dynamicCoord = "y";
+                }
+                else
+                {
+                    staticCoord = "y";
+                    dynamicCoord = "x";
+                }
+
+                labelData = this._getLabelData(
+                    lineStart[staticCoord],
+                    staticCoord,
+                    dynamicCoord,
+                    this.get("minimum"),
+                    this.get("maximum"),
+                    edgeOffset,
+                    layoutLength - edgeOffset - edgeOffset,
+                    len,
+                    explicitLabels
+                );
+
+                points = labelData.points;
+                labelValues = labelData.values;
+                len = points.length;
+                if(!this._labelValuesExplicitlySet)
+                {
+                    this.set("labelValues", labelValues, {src: "internal"});
+                }
+
+                //Don't create the last label or tick.
+                if(this.get("hideFirstMajorUnit"))
+                {
+                    firstPoint = points.shift();
+                    firstLabel = labelValues.shift();
+                    len = len - 1;
+                }
+
+                //Don't create the last label or tick.
+                if(this.get("hideLastMajorUnit"))
+                {
+                    lastPoint = points.pop();
+                    lastLabel = labelValues.pop();
+                    len = len - 1;
+                }
+
+                if(len >= 1)
+                {
+                    pathContext.moveTo(lineStart.x, lineStart.y);
+                    pathContext.lineTo(lineEnd.x, lineEnd.y);
+                    pathContext.stroke();
+                    if(drawTicks)
+                    {
+                        pathContext.strokeStyle = majorTickStyles.color;
+                        pathContext.strokeWidth = majorTickStyles.weight;
+                        for(i = 0; i < len; i = i + 1)
+                        {
+                            point = points[i];
+                            if(point)
+                            {
+                                layout.drawTick.apply(this, [pathContext, points[i], majorTickStyles]);
+                            }
+                        }
+                    }
+                    this._maxLabelSize = 0;
+                    this._totalTitleSize = 0;
+                    this._titleSize = 0;
+                    explicitlySized = layout.getExplicitlySized.apply(this, [styles]);
+                    for(i = 0; i < len; i = i + 1)
+                    {
+                        point = points[i];
+                        if(point)
+                        {
+                            label = this.getLabel(labelStyles);
+                            this._labels.push(label);
+                            formattedValue = labelFunction.apply(labelFunctionScope, [labelValues[i], labelFormat]);
+                            this.get("appendLabelFunction")(label, formattedValue);
+                            labelWidth = Math.round(label.offsetWidth);
+                            labelHeight = Math.round(label.offsetHeight);
+                            if(!explicitlySized)
+                            {
+                                this._layout.updateMaxLabelSize.apply(this, [labelWidth, labelHeight]);
+                            }
+                            this._removeChildren(label);
+                            label.parentNode.removeChild(label);
+                            this._labels.pop();
+                            this._labelWidths.push(labelWidth);
+                            this._labelHeights.push(labelHeight);
+                            formattedValues.push(formattedValue);
+                        }
+                    }
+
+                    this._xOffset = 0;
+                    this._yOffset = 0;
+                    this._widthOffset = 0;
+                    this._heightOffset = 0;
+                    switch(position) {
+                        case "left" :
+                            if(this._explicitWidth)
+                            {
+                                this.set("calculatedWidth", this._explicitWidth);
+                            } else {
+                                this.set("calculatedWidth",
+                                    Math.round(this._totalTitleSize + styles.get("leftTickOffset") + this._maxLabelSize + labelStyles.margin.right)
+                                );
+                            }
+                            this._yOffset = marginTop;
+                            this._heightOffset = marginTop + marginBottom;
+                        break;
+                        case "right" :
+                            if(this._explicitWidth) {
+                                this.set("calculatedWidth", this._explicitWidth);
+                            } else {
+                                this.set(
+                                    "calculatedWidth",
+                                    Math.round(this.get("rightTickOffset") + this._maxLabelSize + this._totalTitleSize + labelStyles.margin.left)
+                                );
+                            }
+                            this._yOffset = marginTop;
+                            this._heightOffset = marginTop + marginBottom;
+                        break;
+                        case "top" :
+                            if(this._explicitHeight) {
+                               this.set("calculatedHeight", this._explicitHeight);
+                            } else {
+                                this.set(
+                                    "calculatedHeight",
+                                    Math.round(this.get("topTickOffset") + this._maxLabelSize + labelStyles.margin.bottom + this._totalTitleSize)
+                                );
+                            }
+                            this._xOffset = marginLeft;
+                            this._widthOffset = marginLeft + marginRight;
+                        break;
+                        case "bottom" :
+                            if(this._explicitHeight) {
+                                this.set("calculatedHeight", this._explicitHeight);
+                            } else {
+                                this.set(
+                                    "calculatedHeight",
+                                    Math.round(this.get("bottomTickOffset") + this._maxLabelSize + labelStyles.margin.top + this._totalTitleSize)
+                                );
+                            }
+                            this._xOffset = marginLeft;
+                            this._widthOffset = marginLeft + marginRight;
+                        break;
+                    }
+                    path.style.left = (this.get("x") - this._xOffset) + "px";
+                    path.style.top = (this.get("y") - this._yOffset) + "px";
+                    pathContext.font = labelStyles.fontSize + " " + labelStyles.fontFamily.toString(); //.replace(/,/g, " ");
+                    pathContext.textBaseline = "top";
+                    len = formattedValues.length;
+                    for(i = 0; i < len; ++i) {
+                        layout.positionLabel.apply(this, [formattedValues[i], points[i], styles, i]);
+                    }
+                    if(firstPoint) {
+                        points.unshift(firstPoint);
+                    }
+                    if(lastPoint) {
+                        points.push(lastPoint);
+                    }
+                    if(firstLabel) {
+                        labelValues.unshift(firstLabel);
+                    }
+                    if(lastLabel) {
+                        labelValues.push(lastLabel);
+                    }
+                    this._tickPoints = points;
+                }
+            }
+        },
+
+        /**
+         * Destructor implementation for the CanvasAxis class.
+         *
+         * @method destructor
+         * @protected
+         */
+        destructor: function() {
+            if(this._path) {
+                if(this._context) {
+                    this._context.clearRect(
+                        0,
+                        0,
+                        this.get("width") + this._widthOffset,
+                        this.get("height") + this._heightOffset
+                    );
+                }
+                this._path.parentNode.removeChild(this._path);
+            }
+        }
+    }), {
+        ATTRS: Y.merge(Y.Axis.ATTRS, {
+            /**
+             * Indicates the x position of axis.
+             *
+             * @attribute x
+             * @type Number
+             */
+            x: {
+                value: 0
+            },
+
+            /**
+             * Indicates the y position of axis.
+             *
+             * @attribute y
+             * @type Number
+             */
+            y: {
+                value: 0
+            },
+
+            /**
+             * The calculated width of the axis.
+             *
+             * @attribute calculatedWidth
+             * @type Number
+             * @readOnly
+             */
+            calculatedWidth: {
+                setter: function(val)
+                {
+                    this._calculatedWidth = val;
+                    this._path.width = val + this._widthOffset;
+                    this._path.height = this.get("height") + this._heightOffset;
+                    return val;
+                }
+            },
+
+            /**
+             * The calculated height of the axis.
+             *
+             * @attribute calculatedHeight
+             * @type Number
+             * @readOnly
+             */
+            calculatedHeight: {
+                setter: function(val)
+                {
+                    this._calculatedHeight = val;
+                    this._path.height = val + this._heightOffset;
+                    this._path.width = this.get("width") + this._widthOffset;
+                    return val;
+                }
+            },
+
+            render: {},
+
+            /**
+             * The element in which the axis will be attached
+             *
+             * @attribute contentBox
+             * @type Node|HTMLElement
+             */
+            contentBox: {
+                getter: function() {
+                    return this.get("render") || Y.one(DOCUMENT.body);
+                }
+            },
+
+            /**
+             *  @attribute path
+             *  @type Shape
+             *  @readOnly
+             *  @private
+             */
+            path: {
+                readOnly: true,
+
+                getter: function()
+                {
+                    var node;
+                    if(!this._path)
+                    {
+                        this._path = DOCUMENT.createElement("canvas");
+                        this._path.style.position = "absolute";
+                        node = this.get("render");
+                        if(node) {
+                            node._node.appendChild(this._path);
+                        }
+                    }
+                    return this._path;
+                }
+            },
+
+            /**
+             *  @attribute tickPath
+             *  @type Shape
+             *  @readOnly
+             *  @private
+             */
+            tickPath: null
+
+            /**
+             * Contains the contents of the axis.
+             *
+             * @attribute node
+             * @type HTMLCanvasElement
+             */
+        })
+    });
+
+/**
+ */
+Y.NumericCanvasAxis = Y.Base.create("numericCanvasAxis", Y.CanvasAxis, [Y.NumericImpl], Y.NumericAxis.prototype);
+/**
+ */
+Y.CategoryCanvasAxis = Y.Base.create("categoryCanvasAxis", Y.CanvasAxis, [Y.CategoryImpl], Y.CategoryAxis.prototype, {
+    ATTRS: {
+        labelFormat: {}
+    }
+});
+/**
+ * Contains logic for rendering an intraday axis.
+ */
+Y.IntradayCanvasAxis = Y.Base.create("intradayCanvasAxis", Y.CategoryCanvasAxis, [Y.IntradayAxisBase]);
 Y.VolumeColumn = function() {
     Y.VolumeColumn.superclass.constructor.apply(this, arguments);
 };
@@ -223,29 +644,45 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
             upPath = this.get("upPath"),
             downPath = this.get("downPath"),
             len = xcoords.length,
-            i,
             styles = this.get("styles"),
             padding = styles.padding,
             dataWidth = this.get("width") - (padding.left + padding.right),
             width = this._calculateMarkerWidth(dataWidth, len, styles.spacing),
             halfwidth = width/2,
-            bottomOrigin = this._bottomOrigin,
+            previousClose = this.get("previousClose");
+        styles.upPath.fill.opacity = styles.upPath.fill.alpha;
+        styles.downPath.fill.opacity = styles.downPath.fill.alpha;
+        this._drawColumns(upPath, downPath, styles, valueData, previousClose, xcoords, volumeCoords, width, halfwidth);
+    },
+
+    /**
+     * Draws the columns.
+     *
+     * @method _drawColumns
+     * @private
+     */
+    _drawColumns: function(
+        upPath,
+        downPath,
+        styles,
+        valueData,
+        previousClose,
+        xcoords,
+        volumeCoords,
+        width,
+        halfwidth
+    ) {
+        var bottomOrigin = this._bottomOrigin,
             top,
             left,
             height,
             selectedPath,
-            previousClose = this.get("previousClose"),
+            i,
+            len = xcoords.length,
             hasUpPath = false,
-            hasDownPath = false,
-            drawInBackground = styles.drawInBackground;
-        styles.upPath.fill.opacity = styles.upPath.fill.alpha;
-        styles.downPath.fill.opacity = styles.downPath.fill.alpha;
+            hasDownPath = false;
         upPath.set(styles.upPath);
         downPath.set(styles.downPath);
-        if(drawInBackground) {
-            upPath.toBack();
-            downPath.toBack();
-        }
         upPath.clear();
         downPath.clear();
         for(i = 0; i < len; i = i + 1) {
@@ -276,7 +713,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
      * Toggles visibility
      *
      * @method _toggleVisible
-     * @param {Boolean} visible indicates visibilitye
+     * @param {Boolean} visible indicates visibility
      * @private
      */
     _toggleVisible: function(visible)
@@ -320,8 +757,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
                     alpha: 1,
                     weight: 0
                 }
-            },
-            drawInBackground: true
+            }
         };
         return this._mergeStyles(styles, Y.VolumeColumn.superclass._getDefaultStyles());
     }
@@ -330,7 +766,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
         ohlcKeys: {
             value: null
         },
-        
+
         /**
          * Read-only attribute indicating the type of series.
          *
@@ -397,6 +833,250 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
         }
     }
 });
+Y.VolumeColumnCanvas = function() {
+    this._paths = [];
+    Y.VolumeColumnCanvas.superclass.constructor.apply(this, arguments);
+};
+
+Y.VolumeColumnCanvas.NAME = "volumeColumnCanvas";
+
+Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
+    drawSeries: function() {
+        var valueData = this.get("yAxis").get("dataProvider"),
+            xcoords = this.get("xcoords"),
+            volumeCoords = this.get("ycoords"),
+            upPath = this.get("upPath"),
+            downPath = this.get("downPath"),
+            len = xcoords.length,
+            styles = this.get("styles"),
+            padding = styles.padding,
+            dataWidth = this.get("width") - (padding.left + padding.right),
+            width = this._calculateMarkerWidth(dataWidth, len, styles.spacing),
+            halfwidth = width/2,
+            previousClose = this.get("previousClose");
+        styles.upPath.fill.opacity = styles.upPath.fill.alpha;
+        styles.downPath.fill.opacity = styles.downPath.fill.alpha;
+        this._drawColumns(upPath, downPath, styles, valueData, previousClose, xcoords, volumeCoords, width, halfwidth);
+    },
+
+    /**
+     * Draws the columns.
+     *
+     * @method _drawColumns
+     * @private
+     */
+    _drawColumns: function(
+        upPath,
+        downPath,
+        styles,
+        valueData,
+        previousClose,
+        xcoords,
+        volumeCoords,
+        width,
+        halfwidth
+    ) {
+        var bottomOrigin = this._bottomOrigin,
+            top,
+            left,
+            height,
+            selectedPath,
+            i,
+            len = xcoords.length,
+            hasUpPath = false,
+            hasDownPath = false,
+            canvasWidth = this.get("width"),
+            canvasHeight = this.get("height"),
+            x = this.get("x"),
+            y = this.get("y");
+
+        upPath.canvas.style.left = x + "px";
+        upPath.canvas.style.top = y + "px";
+        downPath.canvas.style.left = x + "px";
+        downPath.canvas.style.top = y + "px";
+        upPath.canvas.width = canvasWidth;
+        upPath.canvas.height = canvasHeight;
+        downPath.canvas.width = canvasWidth;
+        downPath.canvas.height = canvasHeight;
+        upPath.context.fillStyle = styles.upPath.fill.color;
+        downPath.context.fillStyle = styles.downPath.fill.color;
+        upPath.context.strokeStyle = styles.upPath.stroke.color;
+        downPath.context.strokeStyle = styles.downPath.stroke.color;
+        upPath.context.lineWidth = styles.upPath.stroke.weight;
+        downPath.context.lineWidth = styles.downPath.stroke.weight;
+        upPath.context.clearRect(0, 0, canvasWidth, canvasHeight);
+        downPath.context.clearRect(0, 0, canvasWidth, canvasHeight);
+        for(i = 0; i < len; i = i + 1) {
+            if(previousClose && valueData[i].close < previousClose) {
+                selectedPath = downPath.context;
+                hasDownPath = true;
+            } else {
+                selectedPath = upPath.context;
+                hasUpPath = true;
+            }
+            left = xcoords[i] - halfwidth;
+            top = volumeCoords[i];
+            height = bottomOrigin - top;
+            if(height > 0 && !isNaN(left) && !isNaN(top)) {
+                selectedPath.moveTo(left, top);
+                selectedPath.lineTo(left + width, top);
+                selectedPath.lineTo(left + width, top + height);
+                selectedPath.lineTo(left, top + height);
+                selectedPath.lineTo(left, top);
+            }
+            previousClose = valueData[i].close;
+        }
+        if(hasUpPath) {
+            upPath.context.closePath();
+            upPath.context.fill();
+        }
+        if(hasDownPath) {
+            downPath.context.closePath();
+            downPath.context.fill();
+        }
+    },
+
+    /**
+     * Toggles visibility
+     *
+     * @method _toggleVisible
+     * @param {Boolean} visible indicates visibility
+     * @private
+     */
+    _toggleVisible: function(visible)
+    {
+        var visibility = visible ? "visible" : "hidden";
+        this.get("upPath").canvas.style.visibility = visibility;
+        this.get("downPath").canvas.style.visibility = visibility;
+    },
+
+    /**
+     * Creates an object container a reference to a canvas instance and its
+     * 2d context.
+     *
+     * @param {Object} This can be a graphic instance Node instance or HTMLElement.
+     * @return Object
+     * @private
+     */
+    _getPath: function(node) {
+        var canvas = DOCUMENT.createElement("canvas"),
+            context = canvas.getContext("2d"),
+            path;
+        if(node) {
+            node.appendChild(canvas);
+        }
+        canvas.style.position = "absolute";
+        path =  {
+            canvas: canvas,
+            context: context
+        };
+        this._paths.push(path);
+        return path;
+    },
+
+    /**
+     * Destructor implementation for the VolumeColumnCanvas class.
+     *
+     * @method destructor
+     * @protected
+     */
+    destructor: function() {
+        var upPath = this.get("upPath"),
+            downPath = this.get("downPath"),
+            width = this.get("width"),
+            height = this.get("height"),
+            parentNode;
+        upPath.context.clearRect(0, 0, width, height);
+        downPath.context.clearRect(0, 0, width, height);
+        parentNode = upPath.canvas.parentNode;
+        if(parentNode) {
+            parentNode.removeChild(upPath.canvas);
+        }
+        parentNode = downPath.canvas.parentNode;
+        if(parentNode) {
+            parentNode.removeChild(downPath.canvas);
+        }
+    }
+}, {
+    ATTRS: {
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @readOnly
+         * @default volumeColumnCanvas
+         */
+        type: {
+            value: "volumeColumnCanvas"
+        },
+
+        x: {},
+
+        y: {},
+
+        width: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._width;
+            },
+
+            setter: function(val) {
+                this._width = val;
+                return val;
+            }
+
+        },
+
+        height: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._height;
+            },
+
+            setter: function(val) {
+                this._height = val;
+                return val;
+            }
+        },
+
+        /**
+         * The graphic in which drawings will be rendered.
+         *
+         * @attribute graphic
+         * @type Graphic
+         */
+        graphic: {
+            lazyAdd: false,
+
+            setter: function(val) {
+                var node = val;
+                //woraround for Attribute order of operations bug
+                if(!this.get("rendered")) {
+                    this.set("rendered", true);
+                }
+
+                if(node) {
+                    if(node instanceof Y.Graphic) {
+                        this.set("x", node.get("x"));
+                        this.set("y", node.get("y"));
+                        this.set("width", node.get("width"));
+                        this.set("height", node.get("height"));
+                        node = node.get("node");
+                        node = node ? node.parentNode : null;
+                    } else if(node._node) {
+                        node = node._node;
+                    }
+                }
+                this.set("upPath", this._getPath(node));
+                this.set("downPath", this._getPath(node));
+                return val;
+            }
+        }
+    }
+});
 /**
  * Provides functionality for creating a line series with alternating colors based on thresholds.
  *
@@ -453,10 +1133,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
             }
 
         } else {
-            len = paths.length;
-            for(i = 0; i < len; i = i + 1) {
-                paths[i].clear();
-            }
+            this._clearPaths(paths);
         }
         return paths;
     },
@@ -494,14 +1171,14 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         for(i = 0; i < len; i = i + 1) {
             y = thresholdCoords[i];
             path = paths[i];
-            path.clear();
-            path.moveTo(startX, y);
+            this._clearPaths(path);
+            this._moveTo(path, startX, y);
             if(lineType === "dashed") {
                 this.drawDashedLine(path, startX, y, endX, y, dashLength, gapSpace);
             } else {
-                path.lineTo(endX, y);
+                this._lineTo(path, endX, y);
             }
-            path.end();
+            this._endPaths(path);
         }
     },
 
@@ -570,18 +1247,18 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                 }
                 if(noPointsRendered) {
                     noPointsRendered = false;
-                    paths[pathIndex].moveTo(nextX, nextY);
+                    this._moveTo(paths[pathIndex], nextX, nextY);
                 } else {
                     if(pathIndex !== lastPathIndex) {
                         m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
                         intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
                         intersectY = thresholdCoords[thresholdIndex];
                         if(isNumber(lastPathIndex)) {
-                            paths[lastPathIndex].lineTo(intersectX, intersectY);
+                            this._lineTo(paths[lastPathIndex], intersectX, intersectY);
                         }
-                        paths[pathIndex].moveTo(intersectX, intersectY);
+                        this._moveTo(paths[pathIndex], intersectX, intersectY);
                     }
-                    paths[pathIndex].lineTo(nextX, nextY);
+                    this._lineTo(paths[pathIndex], nextX, nextY);
                 }
                 lastValidX = nextX;
                 lastValidY = nextY;
@@ -591,12 +1268,74 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                 lastPointValid = pointValid;
             }
         }
-        len = paths.length;
-        for(i = 0; i < len; i = i + 1) {
-            paths[i].end();
+        this._endPaths(paths);
+    },
+
+    /**
+     * Executes moveTo.
+     *
+     * @method _moveTo
+     * @param {Path} Path element.
+     * @param {Number} x The x coordinate.
+     * @param {Number} y The y coordinate.
+     * @private
+     */
+    _moveTo: function(path, x, y) {
+        path.moveTo(x, y);
+    },
+
+    /**
+     * Draws a line.
+     *
+     * @method _lineTo
+     * @param {Path} Path element.
+     * @param {Number} x The x coordinate.
+     * @param {Number} y The y coordinate.
+     * @private
+     */
+    _lineTo: function(path, x, y) {
+        path.lineTo(x, y);
+    },
+
+    /**
+     * Clears path instances.
+     *
+     * @method _clearPaths
+     * @param {Path|Array} path A path element or an array of path elements.
+     * @private
+     */
+    _clearPaths: function(path) {
+        var i,
+            len;
+        if(Y.Lang.isArray(path)) {
+            len = path.length;
+            for(i = 0; i < len; i = i + 1) {
+                path[i].clear();
+            }
+        } else {
+            path.clear();
         }
     },
 
+    /**
+     * Closes path instances.
+     *
+     * @method _endPaths
+     * @param {Path|Array} path A path element or an array of path elements.
+     * @private
+     */
+    _endPaths: function(path) {
+        var i,
+            len;
+        if(Y.Lang.isArray(path)) {
+            len = path.length;
+            for(i = 0; i < len; i = i + 1) {
+                path[i].end();
+            }
+        } else {
+            path.end();
+        }
+    },
 
     /**
      * Gets the default value for the `styles` attribute.
@@ -630,6 +1369,395 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
          * @type Array
          */
         thresholds: {}
+    }
+});
+/**
+ * Provides functionality for creating a line series with alternating colors based on thresholds.
+ *
+ * @module charts
+ * @submodule series-line-multiple
+ */
+/**
+ * The MultipleLineCanvasSeries class renders quantitative data on a graph by connecting relevant data points and
+ * using different colors based on a defined threshold value.
+ *
+ * @class MultipleLineCanvasSeries
+ * @extends CartesianSeries
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ * @submodule series-line-multiple
+ */
+Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.MultipleLineSeries, [],  {
+    drawSeries: function() {
+        this._drawLines();
+    },
+
+    /**
+     * Returns an array of path elements in which to draw the lines.
+     *
+     * @method _getPaths
+     * @param {Object} styles Reference to the styles attribute for the instance.
+     * @return Array
+     * @private
+     */
+    _getPaths: function(paths, styles, len)
+    {
+        var node,
+            path,
+            i,
+            colors,
+            weight,
+            canvas,
+            context,
+            width = this.get("width"),
+            height = this.get("height"),
+            x = this.get("x") + "px",
+            y = this.get("y") + "px";
+        if(!paths) {
+            node = this.get("node");
+            paths = [];
+            colors = styles.colors;
+            weight = styles.weight;
+            for(i = 0; i < len; i = i + 1) {
+                canvas = DOCUMENT.createElement("canvas");
+                context = canvas.getContext("2d");
+                canvas.width = width;
+                canvas.height = height;
+                canvas.style.position = "absolute";
+                canvas.style.left = x;
+                canvas.style.top = y;
+                if(node) {
+                    node.appendChild(canvas);
+                }
+                path = {
+                    canvas: canvas,
+                    context: context,
+                    strokeStyle: colors[i % colors.length],
+                    lineWidth: weight
+                };
+                paths.push(path);
+            }
+
+        } else {
+            this._clearPaths(paths);
+        }
+        return paths;
+    },
+
+    _getThresholdCoords: function(thresholds, len, styles, min, max, edgeOffset) {
+        var yAxis = this.get("yAxis"),
+            i,
+            height = this.get("height"),
+            padding = styles.padding,
+            offset = padding.top + edgeOffset,
+            thresholdCoords = [];
+        height = height -  padding.top - padding.bottom - edgeOffset * 2;
+        offset = height - offset;
+        for(i = 0; i < len; i = i + 1) {
+            thresholdCoords.push(
+                Math.round(yAxis._getCoordFromValue(min, max, height, thresholds[i], offset, true) * 1000)/1000
+            );
+        }
+        return thresholdCoords;
+    },
+
+    _drawThresholdLines: function(paths, thresholdCoords, len, styles) {
+        var path,
+            i,
+            xAxis = this.get("xAxis"),
+            edgeOffset = xAxis.get("edgeOffset"),
+            width = this.get("width"),
+            thresholdsStyles = styles.thresholds,
+            lineType = thresholdsStyles.lineType,
+            dashLength = thresholdsStyles.dashLength,
+            gapSpace = thresholdsStyles.gapSpace,
+            startX = styles.padding.left + edgeOffset,
+            endX = width - edgeOffset - styles.padding.right,
+            y;
+        for(i = 0; i < len; i = i + 1) {
+            y = thresholdCoords[i];
+            path = paths[i];
+            this._clearPaths(path);
+            this._moveTo(path, startX, y);
+            if(lineType === "dashed") {
+                this.drawDashedLine(path, startX, y, endX, y, dashLength, gapSpace);
+            } else {
+                this._lineTo(path, endX, y);
+            }
+            this._endPaths(path);
+        }
+    },
+
+    /**
+     * Draws lines for the series.
+     *
+     * @method drawLines
+     * @private
+     */
+    _drawLines: function()
+    {
+        if(this.get("xcoords").length < 1)
+        {
+            return;
+        }
+        var isNumber = Y.Lang.isNumber,
+            direction = this.get("direction"),
+            len,
+            lastPointValid,
+            pointValid,
+            noPointsRendered = true,
+            lastValidX,
+            lastValidY,
+            nextX,
+            nextY,
+            intersectX,
+            intersectY,
+            i,
+            m,
+            thresholds = this.get("thresholds"),
+            thresholdsLength = thresholds ? thresholds.length : 0,
+            pathIndex,
+            lastPathIndex,
+            thresholdIndex,
+            styles = this.get("styles"),
+            graphPaths = this._getPaths(this._graphPaths, styles, thresholdsLength + 1),
+            yAxis = this.get("yAxis"),
+            yMin = yAxis.get("minimum"),
+            yMax = yAxis.get("maximum"),
+            yEdgeOffset = yAxis.get("edgeOffset"),
+            thresholdCoords = this._getThresholdCoords(thresholds, thresholdsLength, styles, yMin, yMax, yEdgeOffset),
+            thresholdPaths = this._getPaths(this._thresholdPaths, styles.thresholds, thresholdsLength),
+            xcoords = this.get("xcoords"),
+            ycoords = this.get("ycoords");
+        this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
+        this._graphPaths = graphPaths;
+        this._thresholdPaths = thresholdPaths;
+        this._paths = this._graphPaths.concat(this._thresholdPaths);
+        len = direction === "vertical" ? ycoords.length : xcoords.length;
+        for(i = 0; i < len; i = i + 1)
+        {
+            nextX = Math.round(xcoords[i] * 1000)/1000;
+            nextY = Math.round(ycoords[i] * 1000)/1000;
+            pointValid = isNumber(nextX) && isNumber(nextY);
+            if(pointValid) {
+                thresholdIndex = 0;
+                if(thresholds) {
+                    for(pathIndex = 0; pathIndex < thresholdsLength; pathIndex = pathIndex + 1) {
+                        if(nextY <= thresholdCoords[pathIndex]) {
+                            break;
+                        } else {
+                            thresholdIndex = pathIndex;
+                        }
+                    }
+                } else {
+                    pathIndex = 0;
+                }
+                if(noPointsRendered) {
+                    noPointsRendered = false;
+                    this._moveTo(graphPaths[pathIndex], nextX, nextY);
+                } else {
+                    if(pathIndex !== lastPathIndex) {
+                        m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
+                        intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
+                        intersectY = thresholdCoords[thresholdIndex];
+                        if(isNumber(lastPathIndex)) {
+                            this._lineTo(graphPaths[lastPathIndex], intersectX, intersectY);
+                        }
+                        this._moveTo(graphPaths[pathIndex], intersectX, intersectY);
+                    }
+                    this._lineTo(graphPaths[pathIndex], nextX, nextY);
+                }
+                lastValidX = nextX;
+                lastValidY = nextY;
+                lastPointValid = true;
+                lastPathIndex = pathIndex;
+            } else {
+                lastPointValid = pointValid;
+            }
+        }
+        this._endPaths(graphPaths);
+    },
+
+    drawDashedLine: function(path, xStart, yStart, xEnd, yEnd, dashSize, gapSize) {
+        var context = path.context;
+        Y.MultipleLineCanvasSeries.superclass.drawDashedLine.apply(this, [
+            context,
+            xStart,
+            yStart,
+            xEnd,
+            yEnd,
+            dashSize,
+            gapSize
+        ]);
+    },
+
+    /**
+     * Executes moveTo.
+     *
+     * @method _moveTo
+     * @param {Object} Object containing a reference to the canvas and context.
+     * @param {Number} x The x coordinate.
+     * @param {Number} y The y coordinate.
+     * @private
+     */
+    _moveTo: function(path, x, y) {
+        path.context.moveTo(x, y);
+    },
+
+    /**
+     * Draws a line.
+     *
+     * @method _lineTo
+     * @param {Object} Object containing a reference to the canvas and context.
+     * @param {Number} x The x coordinate.
+     * @param {Number} y The y coordinate.
+     * @private
+     */
+    _lineTo: function(path, x, y) {
+        path.context.lineTo(x, y);
+    },
+
+    /**
+     * Clears path instances.
+     *
+     * @method _clearPaths
+     * @param {Path|Array} path A path element or an array of path elements.
+     * @private
+     */
+    _clearPaths: function(path) {
+        var i,
+            len,
+            width = this.get("width"),
+            height = this.get("height");
+        if(Y.Lang.isArray(path)) {
+            len = path.length;
+            for(i = 0; i < len; i = i + 1) {
+                path[i].context.clearRect(0, 0, width, height);
+            }
+        } else {
+            path.context.clearRect(0, 0, width, height);
+        }
+    },
+
+    /**
+     * Closes path instances.
+     *
+     * @method _endPaths
+     * @param {Path|Array} path A path element or an array of path elements.
+     * @private
+     */
+    _endPaths: function(path) {
+        var i,
+            len;
+        if(Y.Lang.isArray(path)) {
+            len = path.length;
+            for(i = 0; i < len; i = i + 1) {
+                path[i].context.lineWidth = path[i].lineWidth;
+                path[i].context.strokeStyle = path[i].strokeStyle;
+                path[i].context.stroke();
+            }
+        } else {
+            path.context.lineWidth = path.lineWidth;
+            path.context.strokeStyle = path.strokeStyle;
+            path.context.stroke();
+        }
+    },
+
+    /**
+     * Destructor implementation for the MultipleLineCanvasSeries class.
+     *
+     * @method destructor
+     * @protected
+     */
+    destructor: function() {
+        var path,
+            width = this.get("width"),
+            height = this.get("height");
+        while(this._graphPaths.length > 0) {
+            path = this._graphPaths.pop();
+            path.context.clearRect(0, 0, width, height);
+            path.canvas.parentNode.removeChild(path.canvas);
+        }
+        while(this._thresholdPaths.length > 0) {
+            path = this._thresholdPaths.pop();
+            path.context.clearRect(0, 0, width, height);
+            path.canvas.parentNode.removeChild(path.canvas);
+        }
+    }
+}, {
+    ATTRS: {
+
+        x: {},
+
+        y: {},
+
+        width: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._width;
+            },
+
+            setter: function(val) {
+                this._width = val;
+                return val;
+            }
+
+        },
+
+        height: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._height;
+            },
+
+            setter: function(val) {
+                this._height = val;
+                return val;
+            }
+        },
+
+        node: {
+            setter: function(val) {
+                //woraround for Attribute order of operations bug
+                if(!this.get("rendered")) {
+                    this.set("rendered", true);
+                }
+                return val;
+            }
+        },
+
+        /**
+         * The graphic in which drawings will be rendered.
+         *
+         * @attribute graphic
+         * @type Graphic
+         */
+        graphic: {
+            lazyAdd: false,
+
+            setter: function(val) {
+                var node = val;
+
+                if(node) {
+                    if(node instanceof Y.Graphic) {
+                        this.set("x", node.get("x"));
+                        this.set("y", node.get("y"));
+                        this.set("width", node.get("width"));
+                        this.set("height", node.get("height"));
+                        node = node.get("node");
+                        node = node ? node.parentNode : null;
+                    } else if(node._node) {
+                        node = node._node;
+                    }
+                    if(node) {
+                        this.set("node", node);
+                    }
+                }
+                return val;
+            }
+        }
     }
 });
 /**
@@ -866,15 +1994,13 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
             axisPosition = axis.get("position"),
             points,
             direction = this.get("direction"),
-            graphic = this.get("graphic"),
             styles = this.get("styles"),
             fill = styles.fill,
             border = styles.border,
             line = styles.line,
             stroke = fill && border ? border : line,
             x = this.get("x"),
-            y = this.get("y"),
-            cfg;
+            y = this.get("y");
         startIndex = startIndex || 0;
         interval = interval || 2;
         if(isFinite(w) && isFinite(h) && w > 0 && h > 0)
@@ -889,50 +2015,100 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
             }
             if(path)
             {
-                path.set("width", w);
-                path.set("height", h);
-                path.set("stroke", stroke);
-                path.set("x", x);
-                path.set("y", y);
-                if(fill) {
-                    path.set("fill", fill);
-                }
+                path = this._stylePath.apply(this, [path, w, h, x, y, stroke, fill]);
             }
             else
             {
-                cfg = {
-                    type: "path",
-                    width: w,
-                    stroke: stroke,
-                    height: h,
-                    x: x,
-                    y: y
-                };
-                if(fill) {
-                    cfg.fill = fill;
-                }
-                path = graphic.addShape(cfg);
-                path.addClass("yui3-gridlines");
+                path = this._getPath.apply(this, [w, h, x, y, stroke, fill]);
                 this._path = path;
             }
             if(direction === "vertical")
             {
                 if(fill) {
-                    this._verticalFill(path, points, h, startIndex, interval, w);
+                    this._verticalFill.apply(this, [path, points, h, startIndex, interval, w]);
                 } else {
-                    this._verticalLine(path, points, h, styles);
+                    this._verticalLine.apply(this, [path, points, h, styles]);
                 }
             }
             else
             {
                 if(fill) {
-                    this._horizontalFill(path, points, w, startIndex, interval, h);
+                    this._horizontalFill.apply(this, [path, points, w, startIndex, interval, h]);
                 } else {
-                    this._horizontalLine(path, points, w, styles);
+                    this._horizontalLine.apply(this, [path, points, w, styles]);
                 }
             }
-            path.end();
+            this._endPath.apply(this, [path]);
         }
+    },
+
+    /**
+     * Ends the path element.
+     *
+     * @method _endPath
+     * @param {Path} The path element.
+     * @return
+     */
+    _endPath: function(path) {
+        path.end();
+    },
+
+    /**
+     * Creates a path element.
+     *
+     * @method _getPath
+     * @param {Number} width width for the path.
+     * @param {Number} height height for the path.
+     * @param {Number} x x-coordinate for the path.
+     * @param {Number} y y-coordinate for the path.
+     * @param {Object} stroke Stroke properties for the path.
+     * @param {Object} fill Fill properties for the fill.
+     * @return path
+     * @private
+     */
+    _getPath: function(w, h, x, y, stroke, fill) {
+        var path,
+            graphic = this.get("graphic"),
+            cfg = {
+                type: "path",
+                width: w,
+                stroke: stroke,
+                height: h,
+                x: x,
+                y: y
+            };
+        if(fill) {
+            cfg.fill = fill;
+        }
+        path = graphic.addShape(cfg);
+        path.addClass("yui3-gridlines");
+        return path;
+    },
+
+    /**
+     * Sets the styles and dimensions for the path.
+     *
+     * @method _stylePath
+     * @param {Path} path Reference to the path instance.
+     * @param {Number} w Width of the path.
+     * @param {Number} h Height of the path.
+     * @param {Object} stroke Stroke properties for the path.
+     * @param {Object} fill Fill properties for the path.
+     * @param {Number} x x-coordinate for the path
+     * @param {Number} y y-coordinate for the path
+     * @return Path
+     * @private
+     */
+    _stylePath: function(path, w, h, x, y, stroke, fill) {
+        path.set("width", w);
+        path.set("height", h);
+        path.set("stroke", stroke);
+        path.set("x", x);
+        path.set("y", y);
+        if(fill) {
+            path.set("fill", fill);
+        }
+        return path;
     },
 
     /**
@@ -1110,7 +2286,7 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         y: {
             value: 0
         },
-        
+
         /**
          * Indicates the direction of the gridline.
          *
@@ -1145,6 +2321,330 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
          * @type Number
          */
         count: {}
+    }
+});
+/**
+ * GridlinesCanvas draws gridlines on a Graph.
+ *
+ * @module gallery-charts-stockindicators
+ * @class GridlinesCanvas
+ * @constructor
+ * @extends Base
+ * @uses Renderer
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.GridlinesCanvas = Y.Base.create("gridlinesCanvas", Y.Gridlines, [], {
+    /**
+     * Reference to the `Path` element used for drawing GridlinesCanvas.
+     *
+     * @property _path
+     * @type Path
+     * @private
+     */
+    _path: null,
+
+    /**
+     * Removes the GridlinesCanvas.
+     *
+     * @method remove
+     * @private
+     */
+    remove: function()
+    {
+        var path = this._path,
+            width = this.get("width"),
+            height = this.get("height"),
+            parentNode;
+        if(path)
+        {
+            path.context.clearRect(0, 0, width, height);
+            parentNode = path.canvas.parentNode;
+            if(parentNode) {
+                parentNode.removeChild(path.canvas);
+            }
+        }
+    },
+
+    /**
+     * Draws the gridlines
+     *
+     * @method draw
+     * @param {Number} width The width of the area in which the gridlines will be drawn.
+     * @param {Number} height The height of the area in which the gridlines will be drawn.
+     * @param {Number} startIndex The index in which to start drawing fills (if specified). The default
+     * value is 0.
+     * @param {Number} interval The number gaps between fills (if specified). The default value is 2. A value of 1
+     * would result in a solid fill across the area.
+     * @protected
+     */
+    draw: function()
+    {
+        if(this.get("axis"))
+        {
+            this._drawGridlines.apply(this, arguments);
+        }
+    },
+
+    /**
+     * Ends the path element.
+     *
+     * @method _endPath
+     * @param {Path} The path element.
+     * @return
+     */
+    _endPath: function(path) {
+        if(path.fill) {
+            path.context.fillStyle = path.fill.color;
+            path.context.closePath();
+            path.context.fill();
+        }
+        if(path.stroke) {
+            path.context.strokeStyle = path.stroke.color;
+            path.context.lineWidth = path.stroke.weight;
+            path.context.stroke();
+        }
+    },
+
+    /**
+     * Creates a canvas and returns an object containing a reference to
+     * the canvas, its context and style properties.
+     *
+     * @method _getPath
+     * @param {Number} width width for the path.
+     * @param {Number} height height for the path.
+     * @param {Number} x x-coordinate for the path.
+     * @param {Number} y y-coordinate for the path.
+     * @param {Object} stroke Stroke properties for the path.
+     * @param {Object} fill Fill properties for the fill.
+     * @return Object
+     * @private
+     */
+    _getPath: function(w, h, x, y, stroke, fill) {
+        var path,
+            node = this.get("node"),
+            canvas = DOCUMENT.createElement("canvas"),
+            context = canvas.getContext("2d");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.style.position = "absolute";
+        canvas.style.left = x + "px";
+        canvas.style.top = y + "px";
+        canvas.className = "yui3-gridlines";
+        if(node) {
+            node.appendChild(canvas);
+        }
+        path = {
+            canvas: canvas,
+            context: context
+        };
+        if(stroke) {
+            path.stroke = stroke;
+        }
+        if(fill && fill.color) {
+            path.fill = fill;
+        }
+        return path;
+    },
+
+    /**
+     * Sets the styles and dimensions for the canvas.
+     *
+     * @method _stylePath
+     * @param {Object} path Reference to the path object.
+     * @param {Number} w Width of the path.
+     * @param {Number} h Height of the path.
+     * @param {Object} stroke Stroke properties for the path.
+     * @param {Object} fill Fill properties for the path.
+     * @param {Number} x x-coordinate for the path
+     * @param {Number} y y-coordinate for the path
+     * @return Path
+     * @private
+     */
+    _stylePath: function(path, w, h, x, y, stroke, fill) {
+        path.canvas.width =  w;
+        path.canvas.height = h;
+        path.canvas.style.position = "absolute";
+        path.canvas.style.left = x + "px";
+        path.canvas.style.top = y + "px";
+        if(stroke) {
+            path.stroke = stroke;
+        }
+        if(fill && fill.color) {
+            path.fill = fill;
+        }
+        return path;
+    },
+
+    /**
+     * Calculates the coordinates for the gridlines based on a count.
+     *
+     * @method _getPoints
+     * @param {Number} count Number of gridlines
+     * @return Array
+     * @private
+     */
+    _getPoints: function(count, w, h)
+    {
+        var i,
+            points = [],
+            multiplier,
+            divisor = count - 1;
+        for(i = 0; i < count; i = i + 1)
+        {
+            multiplier = i/divisor;
+            points[i] = {
+                x: w * multiplier,
+                y: h * multiplier
+            };
+        }
+        return points;
+    },
+
+    /**
+     * Algorithm for horizontal lines.
+     *
+     * @method _horizontalLine
+     * @param {Object} path Reference to path object containing references to the
+     * canvas, its context and properties.
+     * @param {Object} pt Coordinates corresponding to a major unit of an axis.
+     * @param {Number} w Width of the Graph
+     * @private
+     */
+    _horizontalLine: function(path, points, width, styles)
+    {
+        var i = styles.showFirst ? 0 : 1,
+            len = styles.showLast ? points.length : points.length - 1,
+            y;
+        for(; i < len; i = i + 1)
+        {
+            y = points[i].y;
+            path.context.moveTo(0, y);
+            path.context.lineTo(width, y);
+        }
+    },
+
+    /**
+     * Algorithm for vertical lines.
+     *
+     * @method _verticalLine
+     * @param {Object} path Reference to path object containing references to the
+     * canvas, its context and properties.
+     * @param {Object} pt Coordinates corresponding to a major unit of an axis.
+     * @param {Number} h Height of the Graph
+     * @private
+     */
+    _verticalLine: function(path, points, height, styles)
+    {
+        var i = styles.showFirst ? 0 : 1,
+            len = styles.showLast ? points.length : points.length - 1,
+            x;
+        for(; i < len; i = i + 1)
+        {
+            x = points[i].x;
+            path.context.moveTo(x, 0);
+            path.context.lineTo(x, height);
+        }
+    },
+
+    /**
+     * Algorithm for horizontal fills.
+     *
+     * @method _horizontalFill
+     * @param {Path} path Reference to the path element
+     * @param {Object} points Coordinates corresponding to a major unit of an axis.
+     * @param {Number} width Width of the fill.
+     * @param {Number} startIndex Indicates the index in which to start drawing fills.
+     * @param {Number} interval Indicates the interval between fills.
+     * @param {Number} height Height of the graph.
+     * @private
+     */
+    _horizontalFill: function(path, points, width, startIndex, interval, height)
+    {
+        var i,
+            y1,
+            y2,
+            len = points.length;
+        for(i = startIndex; i < len; i = i + interval)
+        {
+            y1 = points[i].y;
+            y2 = i < len - 1 ? points[i + 1].y : height;
+            path.context.moveTo(0, y1);
+            path.context.lineTo(0, y2);
+            path.context.lineTo(width, y2);
+            path.context.lineTo(width, y1);
+            path.context.lineTo(0, y1);
+        }
+    },
+
+    /**
+     * Algorithm for vertical fills.
+     *
+     * @method _verticalFill
+     * @param {Path} path Reference to the path element
+     * @param {Object} points Coordinates corresponding to a major unit of an axis.
+     * @param {Number} height Height of the fill.
+     * @param {Number} startIndex Indicates the index in which to start drawing fills.
+     * @param {Number} interval Indicates the interval between fills.
+     * @param {Number} width Width of the graph.
+     * @private
+     */
+    _verticalFill: function(path, points, height, startIndex, interval, width)
+    {
+        var i,
+            x1,
+            x2,
+            len = points.length;
+        for(i = startIndex; i < len; i = i + interval)
+        {
+            x1 = points[i].x;
+            x2 = i < len - 1 ? points[i + 1].x : width;
+            path.context.moveTo(x1, 0);
+            path.context.lineTo(x2, 0);
+            path.context.lineTo(x2, height);
+            path.context.lineTo(x1, height);
+            path.context.lineTo(x1, 0);
+        }
+    }
+},
+{
+    ATTRS: {
+        /**
+         * Indicates the `Graphic` in which the gridlines
+         * are drawn.
+         *
+         * @attribute graphic
+         * @type Graphic
+         */
+        node: {},
+
+        /**
+         * The graphic in which drawings will be rendered.
+         *
+         * @attribute graphic
+         * @type Graphic
+         */
+        graphic: {
+            lazyAdd: false,
+
+            setter: function(val) {
+                var node = val;
+
+                if(node) {
+                    if(node instanceof Y.Graphic) {
+                        this.set("x", node.get("x"));
+                        this.set("y", node.get("y"));
+                        node = node.get("node");
+                        node = node ? node.parentNode : null;
+                    } else if(node._node) {
+                        node = node._node;
+                    }
+                    if(node) {
+                        this.set("node", node);
+                    }
+                }
+                return val;
+            }
+        }
     }
 });
 /**
@@ -1912,6 +3412,283 @@ Y.StockIndicatorsAxisLegend.prototype = {
         }
     }
 };
+Y.StockIndicatorsPrinter = function() {
+    this._init.apply(this, arguments);
+};
+
+Y.StockIndicatorsPrinter.NAME = "stockIndicatorsPrinter";
+
+Y.StockIndicatorsPrinter.prototype = {
+   /**
+    * Look up table for axis classes.
+    *
+    * @property _axesClassMap
+    * @type Object
+    * @private
+    */
+    _axesClassMap: {
+        numeric: Y.NumericCanvasAxis,
+        category: Y.CategoryCanvasAxis,
+        intraday: Y.IntradayCanvasAxis
+    },
+
+    /**
+     * Look up table for graph classes.
+     *
+     * @property _graphClassMap
+     * @type Object
+     * @private
+     */
+    _graphClassMap: {
+        multipleline: Y.MultipleLineCanvasSeries,
+        volumecolumn: Y.VolumeColumnCanvas
+    },
+
+    /**
+     * Sets up properties.
+     *
+     * @method _init
+     * @private
+     */
+    _init: function(charts, width, height) {
+        this._width = width,
+        this._height = height,
+        this._charts = charts;
+    },
+
+    /**
+     * Builds canvas based chart components, renders them into a canvas and generates a data uri for an
+     * image representation of the chart.
+     *
+     * @method getDataURI
+     * @return String
+     */
+    getDataURI: function() {
+        var charts = this._charts,
+            chart,
+            i,
+            len = charts.length,
+            canvas = DOCUMENT.createElement("canvas"),
+            context = canvas.getContext("2d"),
+            gridlinesConfigs = [],
+            axesConfigs = [],
+            graphConfigs = [],
+            graphDimensions = [],
+            axes,
+            gridlines,
+            graphs;
+
+        canvas.width = this._width;
+        canvas.height = this._height;
+        for(i = 0; i < len; i = i + 1) {
+            chart = charts[i];
+            gridlinesConfigs.push(chart.gridlinesConfig);
+            axesConfigs.push(chart.axesConfig);
+            graphConfigs.push(chart.seriesCollection);
+            graphDimensions.push({
+                x: chart.graphX,
+                y: chart.graphY,
+                width: chart.graphWidth,
+                height: chart.graphHeight
+            });
+        }
+
+        axes = this._getAxes(axesConfigs);
+        gridlines = this._getGridlines(gridlinesConfigs, axes);
+        graphs = this._getGraphs(graphConfigs, graphDimensions);
+        canvas = this._printItems(axes, gridlines, graphs, canvas, context, len);
+        return canvas.toDataURL();
+    },
+
+    /**
+     * Draws canvas instances into a master canvas for use in generating a dataURI.
+     *
+     * @method _printItems
+     * @param {Array} axes An array of object, each of which contain a numeric and date  axis instance.
+     * @param {Gridlines} gridlines An array of objects, each of which contain a horizontal and vertical canvas
+     * based gridlines instance.
+     * @param {Array} graphs An array containing arrays of graphs for each chart instance.
+     * @param {Canvas} canvas A canvas instance in which the other canvases will be added to.
+     * @param {2dContext} context The 2d context for the canvas instance.
+     * @param {Number} len The number of charts in the application.
+     * @return Canvas
+     * @private
+     */
+    _printItems: function(axes,  gridlines, graphs, canvas, context, len) {
+        var i,
+            j,
+            pathLen,
+            axis,
+            dateAxis,
+            numericAxis,
+            gridline,
+            graph,
+            x,
+            y,
+            width,
+            height,
+            horizontalGridlines,
+            verticalGridlines;
+        for(i = 0; i < len; i = i + 1) {
+            axis = axes[i];
+            gridline = gridlines[i];
+            dateAxis = axis.date;
+            numericAxis = axis.numeric;
+            if(gridline) {
+                horizontalGridlines = gridline.horizontal;
+                verticalGridlines = gridline.vertical;
+                if(horizontalGridlines) {
+                    context.drawImage(horizontalGridlines._path.canvas, horizontalGridlines.get("x"), horizontalGridlines.get("y"));
+                }
+                if(verticalGridlines) {
+                    context.drawImage(verticalGridlines._path.canvas, verticalGridlines.get("x"), horizontalGridlines.get("y"));
+                }
+            }
+            if(axis) {
+                if(dateAxis) {
+                    context.drawImage(dateAxis._path, dateAxis.get("x") - dateAxis._xOffset, dateAxis.get("y") - dateAxis._yOffset);
+                }
+                if(numericAxis) {
+                    context.drawImage(numericAxis._path, numericAxis.get("x") - numericAxis._xOffset, numericAxis.get("y") - numericAxis._yOffset);
+                }
+            }
+        }
+        len = graphs.length;
+        for(i = 0; i < len; i = i + 1) {
+            graph = graphs[i];
+            if(graph) {
+                x = graph.get("x");
+                y = graph.get("y");
+                if(graph._paths) {
+                    pathLen = graph._paths.length;
+                    width = graph.get("width");
+                    height = graph.get("height");
+                    for(j = 0; j < pathLen; j = j + 1) {
+                        context.drawImage(graph._paths[j].canvas, x, y, width, height);
+                    }
+                }
+            }
+        }
+        return canvas;
+    },
+
+    /**
+     * Returns an array of canvas based axes to for use in image conversion.
+     *
+     * @method _getAxes
+     * @param {Array} configs An array of configuration properties for the axes.
+     * @return Array
+     * @private
+     */
+    _getAxes: function(configs) {
+        var i,
+            len = configs.length,
+            axes = [],
+            dateAxis,
+            numericAxis,
+            config,
+            AxisClass;
+        for(i = 0; i < len; i = i + 1) {
+            config = configs[i];
+            AxisClass = this._axesClassMap[config.date.type];
+            dateAxis = new AxisClass(config.date);
+            dateAxis._drawAxis();
+            AxisClass = this._axesClassMap[config.numeric.type];
+            numericAxis = new AxisClass(config.numeric);
+            numericAxis._drawAxis();
+            axes.push({
+                date: dateAxis,
+                numeric: numericAxis
+            });
+        }
+        return axes;
+    },
+
+    /**
+     * Returns an array of canvas based gridline for use in image conversion.
+     *
+     * @method _getGridlines
+     * @param {Array} configs An array of configuration properties for the gridlines.
+     * @param {Array} axes An array of axis instances.
+     * @return Array
+     * @private
+     */
+    _getGridlines: function(configs, axes) {
+        var horizontalConfig,
+            verticalConfig,
+            horizontalGridlines,
+            verticalGridlines,
+            config,
+            i,
+            width,
+            height,
+            len = configs.length,
+            gridlines = [];
+        for(i = 0; i < len; i = i + 1) {
+            config = configs[i];
+            horizontalConfig = config.horizontal;
+            verticalConfig = config.vertical;
+            horizontalConfig.axis = axes[i].numeric;
+            verticalConfig.axis = axes[i].date;
+            horizontalGridlines = new Y.GridlinesCanvas(horizontalConfig);
+            width = horizontalConfig.width;
+            height = horizontalConfig.height;
+            horizontalGridlines.draw(width, height);
+            verticalGridlines = new Y.GridlinesCanvas(verticalConfig);
+            width = verticalConfig.width;
+            height = verticalConfig.height;
+            verticalGridlines.draw(width, height);
+            gridlines.push({
+                horizontal: horizontalGridlines,
+                vertical: verticalGridlines
+            });
+        }
+        return gridlines;
+    },
+
+    /**
+     * Returns and a array of canvas based graphs for use in image conversion.
+     *
+     * @method _getGraphs
+     * @param {Array} configs An array of graph config objects.
+     * @param {Array} dimensions An array containing the graph x, y, width and height for each chart.
+     * @return Array
+     * @private
+     */
+    _getGraphs: function(configs, dimensions) {
+        var i,
+            j,
+            seriesLen,
+            series,
+            len = configs.length,
+            config,
+            graph,
+            dimension,
+            GraphClass,
+            graphs = [];
+        for(i = 0; i < len; i = i + 1) {
+            series = configs[i];
+            seriesLen = series.length;
+            for(j = 0; j < seriesLen; j = j + 1) {
+                config = series[j];
+                dimension = dimensions[i];
+                config.x = dimension.x;
+                config.y = dimension.y;
+                config.width = dimension.width;
+                config.height = dimension.height;
+                GraphClass = this._graphClassMap[config.type];
+                config.graphic = Y.Node.create('<div>');
+                graph = new GraphClass(config);
+                graph.set("width", config.width);
+                graph.set("height", config.height);
+                graph.draw();
+                graphs.push(graph);
+            }
+        }
+        return graphs;
+    }
+};
+
 /**
  * Provides functionality for a chart.
  *
@@ -1997,6 +3774,23 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         }
         this._charts = charts;
         this._addEvents();
+        if(DOCUMENT && DOCUMENT.createElement("canvas")) {
+            this._printStockIndicators = new Y.StockIndicatorsPrinter(charts, this.get("width"), this.get("height"));
+        }
+    },
+
+    /**
+     * Returns a data uri for an image of the chart.
+     *
+     * @method getDataURI
+     * @return String
+     */
+    getDataURI: function() {
+        var uri;
+        if(this._printStockIndicators) {
+            uri = this._printStockIndicators.getDataURI();
+        }
+        return uri;
     },
 
     /**
@@ -2292,9 +4086,14 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                         } else if(indicatorType[valueIter] === "volumecolumn") {
                             seriesConfig.previousClose = parseFloat(indicator.previousClose);
                             seriesConfig.yAxis = new Y.NumericAxisBase(indicator.yAxis);
+                            seriesConfig.drawInBackground = true;
                         }
                     }
-                    seriesCollection.push(seriesConfig);
+                    if(seriesConfig.drawInBackground) {
+                        seriesCollection.unshift(seriesConfig);
+                    } else {
+                        seriesCollection.push(seriesConfig);
+                    }
                }
             }
         }
@@ -2415,15 +4214,14 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * Renders graph instances into the chart.
      *
      * @method _drawGraphs
-     * @param {Object} config The chart configuration object.
+     * @param {Array} seriesCollection Array containing configuration objects for each graph.
      * @param {Object} axes Object containing references to the date and numeric axes of the chart.
      * @param {Graphic} graphic Reference to the graphic instance in which the graphs will be rendered.
      * @return Array
      * @private
      */
-    _drawGraphs: function(config, axes, graphic) {
-        var seriesCollection = this._getSeriesStyles(this._getSeriesCollection(config), config),
-            series,
+    _drawGraphs: function(seriesCollection, axes, graphic) {
+        var series,
             seriesKey,
             graph,
             graphs = {},
@@ -2447,9 +4245,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 seriesKey = "quote";
             }
             graphs[seriesKey] = graph;
+            this._graphs.push(graph);
         }
 
-        this._graphs.push(graph);
         return graphs;
     },
 
@@ -2470,7 +4268,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         if(horizontalGridlinesConfig) {
             horizontalGridlines = new Y.Gridlines({
                 graphic: graphic,
-                direction: "horizontal",
+                direction: horizontalGridlinesConfig.direction,
                 axis: axes.numeric,
                 x: horizontalGridlinesConfig.x,
                 y: horizontalGridlinesConfig.y,
@@ -2480,15 +4278,13 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         if(verticalGridlinesConfig) {
             verticalGridlines = new Y.Gridlines({
                 graphic:graphic,
-                direction: "vertical",
+                direction: verticalGridlinesConfig.direction,
                 axis: axes.date,
                 styles: verticalGridlinesConfig
             });
         }
         horizontalGridlines.draw(horizontalGridlinesConfig.width, horizontalGridlinesConfig.height);
         verticalGridlines.draw(verticalGridlinesConfig.width, verticalGridlinesConfig.height);
-        horizontalGridlines._path.toBack();
-        verticalGridlines._path.toBack();
         return {
             horizontal: horizontalGridlines,
             vertical: verticalGridlines
@@ -2519,26 +4315,18 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @return Object
      * @private
      */
-    _drawAxes: function(config, graphicConfig) {
+    _drawAxes: function(dateConfig, numericConfig) {
         var axes,
             bb,
-            numericConfig = config.axes.numeric,
-            dateConfig = config.axes.date,
             numericAxis,
             dateAxis,
             NumericClass = this._axesClassMap[numericConfig.type],
             DateClass = this._axesClassMap[dateConfig.type];
-        numericConfig.y = graphicConfig.y;
-        numericConfig.x = config.width - numericConfig.width;
-        numericConfig.height = graphicConfig.height;
-        dateConfig.x = graphicConfig.x;
-        dateConfig.y = config.y + config.height - dateConfig.height;
-        dateConfig.width = graphicConfig.width;
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
         bb.setStyle("left", 0 + "px");
-        bb.setStyle("top", (config.y + config.height - dateConfig.height) + "px");
+        bb.setStyle("top", dateConfig.y + "px");
         bb = numericAxis.get("boundingBox");
         bb.setStyle("left", numericConfig.x + "px");
         bb.setStyle("top", numericConfig.y + "px");
@@ -2548,6 +4336,45 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         };
         this._axes.push(axes);
         return axes;
+    },
+
+    /**
+     * Gets configuration objects for instantiating axes instances.
+     *
+     * @method _getAxesConfigs
+     * @param {Object} config Configuration object for the chart.
+     * @param {Object} graphicConfig Configuration object for the graphs' graphic instance.
+     * @return Object
+     * @private
+     */
+    _getAxesConfigs: function(config, graphicConfig) {
+        var numeric = {},
+            date = {},
+            key,
+            numericConfig = config.axes.numeric,
+            dateConfig = config.axes.date;
+        for(key in numericConfig) {
+            if(numericConfig.hasOwnProperty(key)) {
+                numeric[key] = numericConfig[key];
+            }
+        }
+        for(key in dateConfig) {
+            if(dateConfig.hasOwnProperty(key)) {
+                date[key] = dateConfig[key];
+            }
+        }
+        numeric.y = graphicConfig.y;
+        numeric.x = config.width - numericConfig.width;
+        numeric.height = graphicConfig.height;
+        numeric.styles.margin = graphicConfig.margin;
+        date.x = graphicConfig.x;
+        date.y = config.y + config.height - dateConfig.height;
+        date.width = graphicConfig.width;
+        date.styles.margin = graphicConfig.margin;
+        return {
+            date: date,
+            numeric: numeric
+        };
     },
 
     /**
@@ -2592,6 +4419,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         return graphic;
     },
 
+    /**
+     * Returns the dimensions for a given graphic instance.
+     *
+     * @method _getGraphicDimensions
+     * @param {Object} config The configuration object for the chart.
+     * @param {String} type The component for which dimensions are being calculated.
+     * @return Object
+     * @private
+     */
     _getGraphicDimensions: function(config, type) {
         var graphicConfig,
             axisWidth = config.axes.numeric.width,
@@ -2753,12 +4589,59 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         return legend;
     },
 
+    /**
+     * Gets the dimensions used for the Gridlines' graphic instance.
+     *
+     * @method _getGridlinesDimensions
+     * @param {Object} horizontalGridlines Configuration object for the horizontal gridlines.
+     * @param {Object} verticalGridlines Configuration object for the vertical gridlines.
+     * @return Object
+     * @private
+     */
     _getGridlinesDimensions: function(horizontalGridlines, verticalGridlines) {
         return {
             x: Math.min(horizontalGridlines.x, verticalGridlines.x),
             y: Math.min(horizontalGridlines.y, verticalGridlines.y),
             width: Math.max(horizontalGridlines.width, verticalGridlines.width),
             height: Math.max(horizontalGridlines.height, verticalGridlines.height)
+        };
+    },
+
+    /**
+     * Gets the configuration objects needed to instantiate the gridlines instances.
+     *
+     * @method _getGridlinesConfig
+     * @param {Object} horizontalGridlines Configuration object for the horizontal gridlines.
+     * @param {Object} verticalGridlines Configuration object for the vertical gridlines.
+     * @return Object
+     * @private
+     */
+    _getGridlinesConfig: function(horizontalGridlinesConfig, verticalGridlinesConfig) {
+        var horizontalGridlines,
+            verticalGridlines;
+        if(horizontalGridlinesConfig) {
+            horizontalGridlines = {
+                direction: "horizontal",
+                x: horizontalGridlinesConfig.x,
+                y: horizontalGridlinesConfig.y,
+                width: horizontalGridlinesConfig.width,
+                height: horizontalGridlinesConfig.height,
+                styles: horizontalGridlinesConfig
+            };
+        }
+        if(verticalGridlinesConfig) {
+            verticalGridlines = {
+                direction: "vertical",
+                styles: verticalGridlinesConfig,
+                width: verticalGridlinesConfig.width,
+                height: verticalGridlinesConfig.height,
+                x: verticalGridlinesConfig.x,
+                y: verticalGridlinesConfig.y
+            };
+        }
+        return {
+            horizontal: horizontalGridlines,
+            vertical: verticalGridlines
         };
     },
 
@@ -2781,26 +4664,33 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair,
             legend,
             graphConfig = this._getGraphicDimensions(config, "graphs"),
+            axesConfig,
             crosshairConfig,
-            horizontalGridlinesConfig,
-            verticalGridlinesConfig;
+            gridlinesConfig,
+            seriesCollection;
         config.horizontalGridlines.y = graphConfig.y;
         config.verticalGridlines.x = graphConfig.x;
 
-        horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines");
-        verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
 
-        axes = this._drawAxes(config, graphConfig, cb);
+        axesConfig = this._getAxesConfigs(config, graphConfig);
+        axes = this._drawAxes(axesConfig.date, axesConfig.numeric, cb);
         axes.numeric.render(cb);
         axes.date.render(cb);
 
+        gridlinesConfig = this._getGridlinesConfig(
+            this._getGraphicDimensions(config, "horizontalGridlines"),
+            this._getGraphicDimensions(config, "verticalGridlines")
+        );
+
         gridlinesGraphic = this._createGraphic(
-            this._getGridlinesDimensions(horizontalGridlinesConfig, verticalGridlinesConfig),
+            this._getGridlinesDimensions(gridlinesConfig.horizontal, gridlinesConfig.vertical),
             cb
         );
         graphic = this._createGraphic(graphConfig, cb);
-        gridlines = this._drawGridlines(horizontalGridlinesConfig, verticalGridlinesConfig, axes, gridlinesGraphic);
-        graphs = this._drawGraphs(config, axes, graphic);
+        gridlines = this._drawGridlines(gridlinesConfig.horizontal, gridlinesConfig.vertical, axes, gridlinesGraphic);
+
+        seriesCollection = this._getSeriesStyles(this._getSeriesCollection(config), config);
+        graphs = this._drawGraphs(seriesCollection, axes, graphic);
         hotspot = this._drawHotspot(graphConfig, cb);
         crosshairConfig = this._mergeStyles(this._getGraphicDimensions(config, "crosshair"), config.crosshair);
         crosshairConfig.graphX = graphConfig.x;
@@ -2830,8 +4720,13 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair: crosshair,
             legend: legend,
             xy: graphic.getXY(),
+            axesConfig: axesConfig,
+            gridlinesConfig: gridlinesConfig,
             graphWidth: graphConfig.width,
-            graphHeight: graphConfig.height
+            graphHeight: graphConfig.height,
+            graphX: graphConfig.x,
+            graphY: graphConfig.y,
+            seriesCollection: seriesCollection
         };
         //repaint the gridlines and graph
         graphic._redraw();
