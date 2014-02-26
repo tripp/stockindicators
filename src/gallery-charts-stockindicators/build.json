@@ -4,13 +4,22 @@
         "gallery-charts-stockindicators": {
             "jsfiles": [
                 "Patches.js",
+                "IntradayAxisBase.js",
                 "IntradayAxis.js",
+                "CanvasAxis.js",
+                "NumericCanvasAxis.js",
+                "CategoryCanvasAxis.js",
+                "IntradayCanvasAxis.js",
                 "VolumeColumn.js",
+                "VolumeColumnCanvas.js",
                 "MultipleLineSeries.js",
+                "MultipleLineCanvasSeries.js",
                 "Crosshair.js",
                 "Gridlines.js",
+                "GridlinesCanvas.js",
                 "StockIndicatorsLegend.js",
                 "StockIndicatorsAxisLegend.js",
+                "StockIndicatorsPrinter.js",
                 "StockIndicatorsChart.js",
                 "StockIndicatorsSpark.js"
             ]

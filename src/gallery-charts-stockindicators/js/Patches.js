@@ -40,7 +40,7 @@
         }
         return label;
     };
-   
+
     Y.Axis.prototype._setCanvas = function() {
         var cb = this.get("contentBox"),
             bb = this.get("boundingBox"),
@@ -159,4 +159,4 @@
         props.y = Math.round(topOffset);
         this._rotate(label, props);
     };
- 
+

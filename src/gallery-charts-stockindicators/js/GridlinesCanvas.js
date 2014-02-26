@@ -1,16 +1,16 @@
 /**
- * Gridlines draws gridlines on a Graph.
+ * GridlinesCanvas draws gridlines on a Graph.
  *
  * @module gallery-charts-stockindicators
- * @class Gridlines
+ * @class GridlinesCanvas
  * @constructor
  * @extends Base
  * @uses Renderer
  * @param {Object} config (optional) Configuration parameters.
  */
-Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
+Y.GridlinesCanvas = Y.Base.create("gridlinesCanvas", Y.Gridlines, [], {
     /**
-     * Reference to the `Path` element used for drawing Gridlines.
+     * Reference to the `Path` element used for drawing GridlinesCanvas.
      *
      * @property _path
      * @type Path
@@ -19,17 +19,24 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
     _path: null,
 
     /**
-     * Removes the Gridlines.
+     * Removes the GridlinesCanvas.
      *
      * @method remove
      * @private
      */
     remove: function()
     {
-        var path = this._path;
+        var path = this._path,
+            width = this.get("width"),
+            height = this.get("height"),
+            parentNode;
         if(path)
         {
-            path.destroy();
+            path.context.clearRect(0, 0, width, height);
+            parentNode = path.canvas.parentNode;
+            if(parentNode) {
+                parentNode.removeChild(path.canvas);
+            }
         }
     },
 
@@ -47,76 +54,9 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      */
     draw: function()
     {
-        if(this.get("axis") && this.get("graphic"))
+        if(this.get("axis"))
         {
             this._drawGridlines.apply(this, arguments);
-        }
-    },
-
-    /**
-     * Algorithm for drawing gridlines
-     *
-     * @method _drawGridlines
-     * @param {Number} width The width of the area in which the gridlines will be drawn.
-     * @param {Number} height The height of the area in which the gridlines will be drawn.
-     * @param {Number} startIndex The index in which to start drawing fills (if specified). The default
-     * value is 0.
-     * @param {Number} interval The number gaps between fills (if specified). The default value is 2. A value of 1
-     * would result in a solid fill across the area.
-     * @private
-     */
-    _drawGridlines: function(w, h, startIndex, interval)
-    {
-        var path = this._path,
-            axis = this.get("axis"),
-            axisPosition = axis.get("position"),
-            points,
-            direction = this.get("direction"),
-            styles = this.get("styles"),
-            fill = styles.fill,
-            border = styles.border,
-            line = styles.line,
-            stroke = fill && border ? border : line,
-            x = this.get("x"),
-            y = this.get("y");
-        startIndex = startIndex || 0;
-        interval = interval || 2;
-        if(isFinite(w) && isFinite(h) && w > 0 && h > 0)
-        {
-            if(axisPosition !== "none" && axis && axis.get("tickPoints"))
-            {
-                points = axis.get("tickPoints");
-            }
-            else
-            {
-                points = this._getPoints(axis.get("styles").majorUnit.count, w, h);
-            }
-            if(path)
-            {
-                path = this._stylePath.apply(this, [path, w, h, x, y, stroke, fill]);
-            }
-            else
-            {
-                path = this._getPath.apply(this, [w, h, x, y, stroke, fill]);
-                this._path = path;
-            }
-            if(direction === "vertical")
-            {
-                if(fill) {
-                    this._verticalFill.apply(this, [path, points, h, startIndex, interval, w]);
-                } else {
-                    this._verticalLine.apply(this, [path, points, h, styles]);
-                }
-            }
-            else
-            {
-                if(fill) {
-                    this._horizontalFill.apply(this, [path, points, w, startIndex, interval, h]);
-                } else {
-                    this._horizontalLine.apply(this, [path, points, w, styles]);
-                }
-            }
-            this._endPath.apply(this, [path]);
         }
     },
 
@@ -128,11 +68,21 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * @return
      */
     _endPath: function(path) {
-        path.end();
+        if(path.fill) {
+            path.context.fillStyle = path.fill.color;
+            path.context.closePath();
+            path.context.fill();
+        }
+        if(path.stroke) {
+            path.context.strokeStyle = path.stroke.color;
+            path.context.lineWidth = path.stroke.weight;
+            path.context.stroke();
+        }
     },
 
     /**
-     * Creates a path element.
+     * Creates a canvas and returns an object containing a reference to
+     * the canvas, its context and style properties.
      *
      * @method _getPath
      * @param {Number} width width for the path.
@@ -141,33 +91,41 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * @param {Number} y y-coordinate for the path.
      * @param {Object} stroke Stroke properties for the path.
      * @param {Object} fill Fill properties for the fill.
-     * @return path
+     * @return Object
      * @private
      */
     _getPath: function(w, h, x, y, stroke, fill) {
         var path,
-            graphic = this.get("graphic"),
-            cfg = {
-                type: "path",
-                width: w,
-                stroke: stroke,
-                height: h,
-                x: x,
-                y: y
-            };
-        if(fill) {
-            cfg.fill = fill;
+            node = this.get("node"),
+            canvas = DOCUMENT.createElement("canvas"),
+            context = canvas.getContext("2d");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.style.position = "absolute";
+        canvas.style.left = x + "px";
+        canvas.style.top = y + "px";
+        canvas.className = "yui3-gridlines";
+        if(node) {
+            node.appendChild(canvas);
         }
-        path = graphic.addShape(cfg);
-        path.addClass("yui3-gridlines");
+        path = {
+            canvas: canvas,
+            context: context
+        };
+        if(stroke) {
+            path.stroke = stroke;
+        }
+        if(fill && fill.color) {
+            path.fill = fill;
+        }
         return path;
     },
 
     /**
-     * Sets the styles and dimensions for the path.
+     * Sets the styles and dimensions for the canvas.
      *
      * @method _stylePath
-     * @param {Path} path Reference to the path instance.
+     * @param {Object} path Reference to the path object.
      * @param {Number} w Width of the path.
      * @param {Number} h Height of the path.
      * @param {Object} stroke Stroke properties for the path.
@@ -178,13 +136,16 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * @private
      */
     _stylePath: function(path, w, h, x, y, stroke, fill) {
-        path.set("width", w);
-        path.set("height", h);
-        path.set("stroke", stroke);
-        path.set("x", x);
-        path.set("y", y);
-        if(fill) {
-            path.set("fill", fill);
+        path.canvas.width =  w;
+        path.canvas.height = h;
+        path.canvas.style.position = "absolute";
+        path.canvas.style.left = x + "px";
+        path.canvas.style.top = y + "px";
+        if(stroke) {
+            path.stroke = stroke;
+        }
+        if(fill && fill.color) {
+            path.fill = fill;
         }
         return path;
     },
@@ -218,7 +179,8 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * Algorithm for horizontal lines.
      *
      * @method _horizontalLine
-     * @param {Path} path Reference to path element
+     * @param {Object} path Reference to path object containing references to the
+     * canvas, its context and properties.
      * @param {Object} pt Coordinates corresponding to a major unit of an axis.
      * @param {Number} w Width of the Graph
      * @private
@@ -231,8 +193,8 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         for(; i < len; i = i + 1)
         {
             y = points[i].y;
-            path.moveTo(0, y);
-            path.lineTo(width, y);
+            path.context.moveTo(0, y);
+            path.context.lineTo(width, y);
         }
     },
 
@@ -240,7 +202,8 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * Algorithm for vertical lines.
      *
      * @method _verticalLine
-     * @param {Path} path Reference to path element
+     * @param {Object} path Reference to path object containing references to the
+     * canvas, its context and properties.
      * @param {Object} pt Coordinates corresponding to a major unit of an axis.
      * @param {Number} h Height of the Graph
      * @private
@@ -253,8 +216,8 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         for(; i < len; i = i + 1)
         {
             x = points[i].x;
-            path.moveTo(x, 0);
-            path.lineTo(x, height);
+            path.context.moveTo(x, 0);
+            path.context.lineTo(x, height);
         }
     },
 
@@ -280,12 +243,11 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         {
             y1 = points[i].y;
             y2 = i < len - 1 ? points[i + 1].y : height;
-            path.moveTo(0, y1);
-            path.lineTo(0, y2);
-            path.lineTo(width, y2);
-            path.lineTo(width, y1);
-            path.lineTo(0, y1);
-            path.closePath();
+            path.context.moveTo(0, y1);
+            path.context.lineTo(0, y2);
+            path.context.lineTo(width, y2);
+            path.context.lineTo(width, y1);
+            path.context.lineTo(0, y1);
         }
     },
 
@@ -311,77 +273,16 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
         {
             x1 = points[i].x;
             x2 = i < len - 1 ? points[i + 1].x : width;
-            path.moveTo(x1, 0);
-            path.lineTo(x2, 0);
-            path.lineTo(x2, height);
-            path.lineTo(x1, height);
-            path.lineTo(x1, 0);
-            path.closePath();
+            path.context.moveTo(x1, 0);
+            path.context.lineTo(x2, 0);
+            path.context.lineTo(x2, height);
+            path.context.lineTo(x1, height);
+            path.context.lineTo(x1, 0);
         }
-    },
-
-    /**
-     * Gets the default value for the `styles` attribute. Overrides
-     * base implementation.
-     *
-     * @method _getDefaultStyles
-     * @return Object
-     * @protected
-     */
-    _getDefaultStyles: function()
-    {
-        var defs = {
-            line: {
-                color:"#f0efe9",
-                weight: 1,
-                alpha: 1
-            },
-            fill: null,
-            showFirst: true,
-            showLast: true
-        };
-        return defs;
     }
 },
 {
     ATTRS: {
-        /**
-         * Indicates the x position of gridlines.
-         *
-         * @attribute x
-         * @type Number
-         */
-        x: {
-            value: 0
-        },
-
-        /**
-         * Indicates the y position of gridlines.
-         *
-         * @attribute y
-         * @type Number
-         */
-        y: {
-            value: 0
-        },
-
-        /**
-         * Indicates the direction of the gridline.
-         *
-         * @attribute direction
-         * @type String
-         */
-        direction: {},
-
-        /**
-         * Indicate the `Axis` in which to bind
-         * the gridlines.
-         *
-         * @attribute axis
-         * @type Axis
-         */
-        axis: {},
-
         /**
          * Indicates the `Graphic` in which the gridlines
          * are drawn.
@@ -389,15 +290,35 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
          * @attribute graphic
          * @type Graphic
          */
-        graphic: {},
+        node: {},
 
         /**
-         * Indicates the number of gridlines to display. If no value is set, gridlines will equal the number of ticks in
-         * the corresponding axis.
+         * The graphic in which drawings will be rendered.
          *
-         * @attribute count
-         * @type Number
+         * @attribute graphic
+         * @type Graphic
          */
-        count: {}
+        graphic: {
+            lazyAdd: false,
+
+            setter: function(val) {
+                var node = val;
+
+                if(node) {
+                    if(node instanceof Y.Graphic) {
+                        this.set("x", node.get("x"));
+                        this.set("y", node.get("y"));
+                        node = node.get("node");
+                        node = node ? node.parentNode : null;
+                    } else if(node._node) {
+                        node = node._node;
+                    }
+                    if(node) {
+                        this.set("node", node);
+                    }
+                }
+                return val;
+            }
+        }
     }
 });

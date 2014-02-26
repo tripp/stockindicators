@@ -12,29 +12,45 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
             upPath = this.get("upPath"),
             downPath = this.get("downPath"),
             len = xcoords.length,
-            i,
             styles = this.get("styles"),
             padding = styles.padding,
             dataWidth = this.get("width") - (padding.left + padding.right),
             width = this._calculateMarkerWidth(dataWidth, len, styles.spacing),
             halfwidth = width/2,
-            bottomOrigin = this._bottomOrigin,
+            previousClose = this.get("previousClose");
+        styles.upPath.fill.opacity = styles.upPath.fill.alpha;
+        styles.downPath.fill.opacity = styles.downPath.fill.alpha;
+        this._drawColumns(upPath, downPath, styles, valueData, previousClose, xcoords, volumeCoords, width, halfwidth);
+    },
+
+    /**
+     * Draws the columns.
+     *
+     * @method _drawColumns
+     * @private
+     */
+    _drawColumns: function(
+        upPath,
+        downPath,
+        styles,
+        valueData,
+        previousClose,
+        xcoords,
+        volumeCoords,
+        width,
+        halfwidth
+    ) {
+        var bottomOrigin = this._bottomOrigin,
             top,
             left,
             height,
             selectedPath,
-            previousClose = this.get("previousClose"),
+            i,
+            len = xcoords.length,
             hasUpPath = false,
-            hasDownPath = false,
-            drawInBackground = styles.drawInBackground;
-        styles.upPath.fill.opacity = styles.upPath.fill.alpha;
-        styles.downPath.fill.opacity = styles.downPath.fill.alpha;
+            hasDownPath = false;
         upPath.set(styles.upPath);
         downPath.set(styles.downPath);
-        if(drawInBackground) {
-            upPath.toBack();
-            downPath.toBack();
-        }
         upPath.clear();
         downPath.clear();
         for(i = 0; i < len; i = i + 1) {
@@ -65,7 +81,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
      * Toggles visibility
      *
      * @method _toggleVisible
-     * @param {Boolean} visible indicates visibilitye
+     * @param {Boolean} visible indicates visibility
      * @private
      */
     _toggleVisible: function(visible)
@@ -109,8 +125,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
                     alpha: 1,
                     weight: 0
                 }
-            },
-            drawInBackground: true
+            }
         };
         return this._mergeStyles(styles, Y.VolumeColumn.superclass._getDefaultStyles());
     }
@@ -119,7 +134,7 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
         ohlcKeys: {
             value: null
         },
-        
+
         /**
          * Read-only attribute indicating the type of series.
          *

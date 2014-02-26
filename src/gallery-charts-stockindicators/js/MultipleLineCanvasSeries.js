@@ -5,16 +5,16 @@
  * @submodule series-line-multiple
  */
 /**
- * The MultipleLineSeries class renders quantitative data on a graph by connecting relevant data points and
+ * The MultipleLineCanvasSeries class renders quantitative data on a graph by connecting relevant data points and
  * using different colors based on a defined threshold value.
  *
- * @class MultipleLineSeries
+ * @class MultipleLineCanvasSeries
  * @extends CartesianSeries
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  * @submodule series-line-multiple
  */
-Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y.Lines],  {
+Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.MultipleLineSeries, [],  {
     drawSeries: function() {
         this._drawLines();
     },
@@ -29,27 +29,39 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
      */
     _getPaths: function(paths, styles, len)
     {
-        var graphic,
+        var node,
             path,
             i,
             colors,
-            alphas,
-            weight;
+            weight,
+            canvas,
+            context,
+            width = this.get("width"),
+            height = this.get("height"),
+            x = this.get("x") + "px",
+            y = this.get("y") + "px";
         if(!paths) {
-            graphic = this.get("graphic") || this.get("graph").get("graphic");
+            node = this.get("node");
             paths = [];
             colors = styles.colors;
-            alphas = styles.alphas;
             weight = styles.weight;
             for(i = 0; i < len; i = i + 1) {
-                path = graphic.addShape({
-                    type: "path",
-                    stroke: {
-                        color: colors[i % colors.length],
-                        opacity: alphas[i % alphas.length],
-                        weight: weight
-                    }
-                });
+                canvas = DOCUMENT.createElement("canvas");
+                context = canvas.getContext("2d");
+                canvas.width = width;
+                canvas.height = height;
+                canvas.style.position = "absolute";
+                canvas.style.left = x;
+                canvas.style.top = y;
+                if(node) {
+                    node.appendChild(canvas);
+                }
+                path = {
+                    canvas: canvas,
+                    context: context,
+                    strokeStyle: colors[i % colors.length],
+                    lineWidth: weight
+                };
                 paths.push(path);
             }
 
@@ -135,7 +147,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
             lastPathIndex,
             thresholdIndex,
             styles = this.get("styles"),
-            paths = this._getPaths(this._paths, styles, thresholdsLength + 1),
+            graphPaths = this._getPaths(this._graphPaths, styles, thresholdsLength + 1),
             yAxis = this.get("yAxis"),
             yMin = yAxis.get("minimum"),
             yMax = yAxis.get("maximum"),
@@ -145,8 +157,9 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
             xcoords = this.get("xcoords"),
             ycoords = this.get("ycoords");
         this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
-        this._paths = paths;
+        this._graphPaths = graphPaths;
         this._thresholdPaths = thresholdPaths;
+        this._paths = this._graphPaths.concat(this._thresholdPaths);
         len = direction === "vertical" ? ycoords.length : xcoords.length;
         for(i = 0; i < len; i = i + 1)
         {
@@ -168,18 +181,18 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                 }
                 if(noPointsRendered) {
                     noPointsRendered = false;
-                    this._moveTo(paths[pathIndex], nextX, nextY);
+                    this._moveTo(graphPaths[pathIndex], nextX, nextY);
                 } else {
                     if(pathIndex !== lastPathIndex) {
                         m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
                         intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
                         intersectY = thresholdCoords[thresholdIndex];
                         if(isNumber(lastPathIndex)) {
-                            this._lineTo(paths[lastPathIndex], intersectX, intersectY);
+                            this._lineTo(graphPaths[lastPathIndex], intersectX, intersectY);
                         }
-                        this._moveTo(paths[pathIndex], intersectX, intersectY);
+                        this._moveTo(graphPaths[pathIndex], intersectX, intersectY);
                     }
-                    this._lineTo(paths[pathIndex], nextX, nextY);
+                    this._lineTo(graphPaths[pathIndex], nextX, nextY);
                 }
                 lastValidX = nextX;
                 lastValidY = nextY;
@@ -189,33 +202,46 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                 lastPointValid = pointValid;
             }
         }
-        this._endPaths(paths);
+        this._endPaths(graphPaths);
+    },
+
+    drawDashedLine: function(path, xStart, yStart, xEnd, yEnd, dashSize, gapSize) {
+        var context = path.context;
+        Y.MultipleLineCanvasSeries.superclass.drawDashedLine.apply(this, [
+            context,
+            xStart,
+            yStart,
+            xEnd,
+            yEnd,
+            dashSize,
+            gapSize
+        ]);
     },
 
     /**
      * Executes moveTo.
      *
      * @method _moveTo
-     * @param {Path} Path element.
+     * @param {Object} Object containing a reference to the canvas and context.
      * @param {Number} x The x coordinate.
      * @param {Number} y The y coordinate.
      * @private
      */
     _moveTo: function(path, x, y) {
-        path.moveTo(x, y);
+        path.context.moveTo(x, y);
     },
 
     /**
      * Draws a line.
      *
      * @method _lineTo
-     * @param {Path} Path element.
+     * @param {Object} Object containing a reference to the canvas and context.
      * @param {Number} x The x coordinate.
      * @param {Number} y The y coordinate.
      * @private
      */
     _lineTo: function(path, x, y) {
-        path.lineTo(x, y);
+        path.context.lineTo(x, y);
     },
 
     /**
@@ -227,14 +253,16 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
      */
     _clearPaths: function(path) {
         var i,
-            len;
+            len,
+            width = this.get("width"),
+            height = this.get("height");
         if(Y.Lang.isArray(path)) {
             len = path.length;
             for(i = 0; i < len; i = i + 1) {
-                path[i].clear();
+                path[i].context.clearRect(0, 0, width, height);
             }
         } else {
-            path.clear();
+            path.context.clearRect(0, 0, width, height);
         }
     },
 
@@ -251,44 +279,111 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         if(Y.Lang.isArray(path)) {
             len = path.length;
             for(i = 0; i < len; i = i + 1) {
-                path[i].end();
+                path[i].context.lineWidth = path[i].lineWidth;
+                path[i].context.strokeStyle = path[i].strokeStyle;
+                path[i].context.stroke();
             }
         } else {
-            path.end();
+            path.context.lineWidth = path.lineWidth;
+            path.context.strokeStyle = path.strokeStyle;
+            path.context.stroke();
         }
     },
 
     /**
-     * Gets the default value for the `styles` attribute.
+     * Destructor implementation for the CartesianSeries class. Calls destroy on all Graphic instances.
      *
-     * @method _getDefaultStyles
-     * @return Object
+     * @method destructor
      * @protected
      */
-    _getDefaultStyles: function() {
-        var styles = {
-                alphas: [1],
-                weight: 6,
-                colors: this._defaultLineColors.concat(),
-                thresholds: {
-                    colors: ["#999"],
-                    alphas: [1],
-                    weight: 1,
-                    lineType: "dashed",
-                    dashLength:5,
-                    gapSpace:5
-                }
-            };
-        return Y.merge(Y.Renderer.prototype._getDefaultStyles(), styles);
+    destructor: function() {
+        var path,
+            width = this.get("width"),
+            height = this.get("height");
+        while(this._graphPaths.length > 0) {
+            path = this._graphPaths.pop();
+            path.context.clearRect(0, 0, width, height);
+            path.canvas.parentNode.removeChild(path.canvas);
+        }
+        while(this._thresholdPaths.length > 0) {
+            path = this._thresholdPaths.pop();
+            path.context.clearRect(0, 0, width, height);
+            path.canvas.parentNode.removeChild(path.canvas);
+        }
     }
 }, {
     ATTRS: {
+
+        x: {},
+
+        y: {},
+
+        width: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._width;
+            },
+
+            setter: function(val) {
+                this._width = val;
+                return val;
+            }
+
+        },
+
+        height: {
+            lazyAdd: false,
+
+            getter: function() {
+                return this._height;
+            },
+
+            setter: function(val) {
+                this._height = val;
+                return val;
+            }
+        },
+
+        node: {
+            setter: function(val) {
+                //woraround for Attribute order of operations bug
+                if(!this.get("rendered")) {
+                    this.set("rendered", true);
+                }
+                return val;
+            }
+        },
+
         /**
-         * An array of thresholds. Used to define where lines would change colors.
+         * The graphic in which drawings will be rendered.
          *
-         * @attribute thresholds
-         * @type Array
+         * @attribute graphic
+         * @type Graphic
          */
-        thresholds: {}
+        graphic: {
+            lazyAdd: false,
+
+            setter: function(val) {
+                var node = val;
+
+                if(node) {
+                    if(node instanceof Y.Graphic) {
+                        this.set("x", node.get("x"));
+                        this.set("y", node.get("y"));
+                        this.set("width", node.get("width"));
+                        this.set("height", node.get("height"));
+                        node = node.get("node");
+                        node = node ? node.parentNode : null;
+                    } else if(node._node) {
+                        node = node._node;
+                    }
+                    if(node) {
+                        this.set("node", node);
+                    }
+                }
+                return val;
+            }
+        }
     }
 });

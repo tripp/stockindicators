@@ -83,6 +83,23 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         }
         this._charts = charts;
         this._addEvents();
+        if(DOCUMENT && DOCUMENT.createElement("canvas")) {
+            this._printStockIndicators = new Y.StockIndicatorsPrinter(charts, this.get("width"), this.get("height"));
+        }
+    },
+
+    /**
+     * Returns a data uri for an image of the chart.
+     *
+     * @method getDataURI
+     * @return String
+     */
+    getDataURI: function() {
+        var uri;
+        if(this._printStockIndicators) {
+            uri = this._printStockIndicators.getDataURI();
+        }
+        return uri;
     },
 
     /**
@@ -378,9 +395,14 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                         } else if(indicatorType[valueIter] === "volumecolumn") {
                             seriesConfig.previousClose = parseFloat(indicator.previousClose);
                             seriesConfig.yAxis = new Y.NumericAxisBase(indicator.yAxis);
+                            seriesConfig.drawInBackground = true;
                         }
                     }
-                    seriesCollection.push(seriesConfig);
+                    if(seriesConfig.drawInBackground) {
+                        seriesCollection.unshift(seriesConfig);
+                    } else {
+                        seriesCollection.push(seriesConfig);
+                    }
                }
             }
         }
@@ -501,15 +523,14 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * Renders graph instances into the chart.
      *
      * @method _drawGraphs
-     * @param {Object} config The chart configuration object.
+     * @param {Array} seriesCollection Array containing configuration objects for each graph.
      * @param {Object} axes Object containing references to the date and numeric axes of the chart.
      * @param {Graphic} graphic Reference to the graphic instance in which the graphs will be rendered.
      * @return Array
      * @private
      */
-    _drawGraphs: function(config, axes, graphic) {
-        var seriesCollection = this._getSeriesStyles(this._getSeriesCollection(config), config),
-            series,
+    _drawGraphs: function(seriesCollection, axes, graphic) {
+        var series,
             seriesKey,
             graph,
             graphs = {},
@@ -533,9 +554,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 seriesKey = "quote";
             }
             graphs[seriesKey] = graph;
+            this._graphs.push(graph);
         }
 
-        this._graphs.push(graph);
         return graphs;
     },
 
@@ -556,7 +577,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         if(horizontalGridlinesConfig) {
             horizontalGridlines = new Y.Gridlines({
                 graphic: graphic,
-                direction: "horizontal",
+                direction: horizontalGridlinesConfig.direction,
                 axis: axes.numeric,
                 x: horizontalGridlinesConfig.x,
                 y: horizontalGridlinesConfig.y,
@@ -566,15 +587,13 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         if(verticalGridlinesConfig) {
             verticalGridlines = new Y.Gridlines({
                 graphic:graphic,
-                direction: "vertical",
+                direction: verticalGridlinesConfig.direction,
                 axis: axes.date,
                 styles: verticalGridlinesConfig
             });
         }
         horizontalGridlines.draw(horizontalGridlinesConfig.width, horizontalGridlinesConfig.height);
         verticalGridlines.draw(verticalGridlinesConfig.width, verticalGridlinesConfig.height);
-        horizontalGridlines._path.toBack();
-        verticalGridlines._path.toBack();
         return {
             horizontal: horizontalGridlines,
             vertical: verticalGridlines
@@ -605,26 +624,18 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @return Object
      * @private
      */
-    _drawAxes: function(config, graphicConfig) {
+    _drawAxes: function(dateConfig, numericConfig) {
         var axes,
             bb,
-            numericConfig = config.axes.numeric,
-            dateConfig = config.axes.date,
             numericAxis,
             dateAxis,
             NumericClass = this._axesClassMap[numericConfig.type],
             DateClass = this._axesClassMap[dateConfig.type];
-        numericConfig.y = graphicConfig.y;
-        numericConfig.x = config.width - numericConfig.width;
-        numericConfig.height = graphicConfig.height;
-        dateConfig.x = graphicConfig.x;
-        dateConfig.y = config.y + config.height - dateConfig.height;
-        dateConfig.width = graphicConfig.width;
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
         bb.setStyle("left", 0 + "px");
-        bb.setStyle("top", (config.y + config.height - dateConfig.height) + "px");
+        bb.setStyle("top", dateConfig.y + "px");
         bb = numericAxis.get("boundingBox");
         bb.setStyle("left", numericConfig.x + "px");
         bb.setStyle("top", numericConfig.y + "px");
@@ -634,6 +645,45 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         };
         this._axes.push(axes);
         return axes;
+    },
+
+    /**
+     * Gets configuration objects for instantiating axes instances.
+     *
+     * @method _getAxesConfigs
+     * @param {Object} config Configuration object for the chart.
+     * @param {Object} graphicConfig Configuration object for the graphs' graphic instance.
+     * @return Object
+     * @private
+     */
+    _getAxesConfigs: function(config, graphicConfig) {
+        var numeric = {},
+            date = {},
+            key,
+            numericConfig = config.axes.numeric,
+            dateConfig = config.axes.date;
+        for(key in numericConfig) {
+            if(numericConfig.hasOwnProperty(key)) {
+                numeric[key] = numericConfig[key];
+            }
+        }
+        for(key in dateConfig) {
+            if(dateConfig.hasOwnProperty(key)) {
+                date[key] = dateConfig[key];
+            }
+        }
+        numeric.y = graphicConfig.y;
+        numeric.x = config.width - numericConfig.width;
+        numeric.height = graphicConfig.height;
+        numeric.styles.margin = graphicConfig.margin;
+        date.x = graphicConfig.x;
+        date.y = config.y + config.height - dateConfig.height;
+        date.width = graphicConfig.width;
+        date.styles.margin = graphicConfig.margin;
+        return {
+            date: date,
+            numeric: numeric
+        };
     },
 
     /**
@@ -678,6 +728,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         return graphic;
     },
 
+    /**
+     * Returns the dimensions for a given graphic instance.
+     *
+     * @method _getGraphicDimensions
+     * @param {Object} config The configuration object for the chart.
+     * @param {String} type The component for which dimensions are being calculated.
+     * @return Object
+     * @private
+     */
     _getGraphicDimensions: function(config, type) {
         var graphicConfig,
             axisWidth = config.axes.numeric.width,
@@ -839,12 +898,59 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         return legend;
     },
 
+    /**
+     * Gets the dimensions used for the Gridlines' graphic instance.
+     *
+     * @method _getGridlinesDimensions
+     * @param {Object} horizontalGridlines Configuration object for the horizontal gridlines.
+     * @param {Object} verticalGridlines Configuration object for the vertical gridlines.
+     * @return Object
+     * @private
+     */
     _getGridlinesDimensions: function(horizontalGridlines, verticalGridlines) {
         return {
             x: Math.min(horizontalGridlines.x, verticalGridlines.x),
             y: Math.min(horizontalGridlines.y, verticalGridlines.y),
             width: Math.max(horizontalGridlines.width, verticalGridlines.width),
             height: Math.max(horizontalGridlines.height, verticalGridlines.height)
+        };
+    },
+
+    /**
+     * Gets the configuration objects needed to instantiate the gridlines instances.
+     *
+     * @method _getGridlinesConfig 
+     * @param {Object} horizontalGridlines Configuration object for the horizontal gridlines.
+     * @param {Object} verticalGridlines Configuration object for the vertical gridlines.
+     * @return Object
+     * @private
+     */
+    _getGridlinesConfig: function(horizontalGridlinesConfig, verticalGridlinesConfig) {
+        var horizontalGridlines,
+            verticalGridlines;
+        if(horizontalGridlinesConfig) {
+            horizontalGridlines = {
+                direction: "horizontal",
+                x: horizontalGridlinesConfig.x,
+                y: horizontalGridlinesConfig.y,
+                width: horizontalGridlinesConfig.width,
+                height: horizontalGridlinesConfig.height,
+                styles: horizontalGridlinesConfig
+            };
+        }
+        if(verticalGridlinesConfig) {
+            verticalGridlines = {
+                direction: "vertical",
+                styles: verticalGridlinesConfig,
+                width: verticalGridlinesConfig.width,
+                height: verticalGridlinesConfig.height,
+                x: verticalGridlinesConfig.x,
+                y: verticalGridlinesConfig.y
+            };
+        }
+        return {
+            horizontal: horizontalGridlines,
+            vertical: verticalGridlines
         };
     },
 
@@ -867,26 +973,33 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair,
             legend,
             graphConfig = this._getGraphicDimensions(config, "graphs"),
+            axesConfig,
             crosshairConfig,
-            horizontalGridlinesConfig,
-            verticalGridlinesConfig;
+            gridlinesConfig,
+            seriesCollection;
         config.horizontalGridlines.y = graphConfig.y;
         config.verticalGridlines.x = graphConfig.x;
 
-        horizontalGridlinesConfig = this._getGraphicDimensions(config, "horizontalGridlines");
-        verticalGridlinesConfig = this._getGraphicDimensions(config, "verticalGridlines");
 
-        axes = this._drawAxes(config, graphConfig, cb);
+        axesConfig = this._getAxesConfigs(config, graphConfig);
+        axes = this._drawAxes(axesConfig.date, axesConfig.numeric, cb);
         axes.numeric.render(cb);
         axes.date.render(cb);
+        
+        gridlinesConfig = this._getGridlinesConfig(
+            this._getGraphicDimensions(config, "horizontalGridlines"),
+            this._getGraphicDimensions(config, "verticalGridlines")
+        );
 
         gridlinesGraphic = this._createGraphic(
-            this._getGridlinesDimensions(horizontalGridlinesConfig, verticalGridlinesConfig),
+            this._getGridlinesDimensions(gridlinesConfig.horizontal, gridlinesConfig.vertical),
             cb
         );
         graphic = this._createGraphic(graphConfig, cb);
-        gridlines = this._drawGridlines(horizontalGridlinesConfig, verticalGridlinesConfig, axes, gridlinesGraphic);
-        graphs = this._drawGraphs(config, axes, graphic);
+        gridlines = this._drawGridlines(gridlinesConfig.horizontal, gridlinesConfig.vertical, axes, gridlinesGraphic);
+
+        seriesCollection = this._getSeriesStyles(this._getSeriesCollection(config), config);
+        graphs = this._drawGraphs(seriesCollection, axes, graphic);
         hotspot = this._drawHotspot(graphConfig, cb);
         crosshairConfig = this._mergeStyles(this._getGraphicDimensions(config, "crosshair"), config.crosshair);
         crosshairConfig.graphX = graphConfig.x;
@@ -916,8 +1029,13 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             crosshair: crosshair,
             legend: legend,
             xy: graphic.getXY(),
+            axesConfig: axesConfig,
+            gridlinesConfig: gridlinesConfig,
             graphWidth: graphConfig.width,
-            graphHeight: graphConfig.height
+            graphHeight: graphConfig.height,
+            graphX: graphConfig.x,
+            graphY: graphConfig.y,
+            seriesCollection: seriesCollection
         };
         //repaint the gridlines and graph
         graphic._redraw();
