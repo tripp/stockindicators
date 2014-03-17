@@ -632,11 +632,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
-        bb.setStyle("left", 0 + "px");
-        bb.setStyle("top", dateConfig.y + "px");
+        bb._node.style.left = 0;
+        bb._node.style.top = dateConfig.y + "px";
+
         bb = numericAxis.get("boundingBox");
-        bb.setStyle("left", numericConfig.x + "px");
-        bb.setStyle("top", numericConfig.y + "px");
+        bb._node.style.left = numericConfig.x + "px";
+        bb._node.style.top = numericConfig.y + "px";
         axes = {
             numeric: numericAxis,
             date: dateAxis
