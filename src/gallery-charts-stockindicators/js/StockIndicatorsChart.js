@@ -21,7 +21,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      */
     initializer: function() {
         var cb = this.get("contentBox");
-        cb.setStyle("position", "relative");
+        cb._node.style.position = "relative";
         this._axes = [];
         this._graphs = [];
         this._graphics = [];
