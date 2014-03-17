@@ -45,11 +45,11 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * would result in a solid fill across the area.
      * @protected
      */
-    draw: function()
+    draw: function(w, h, startIndex, interval)
     {
         if(this.get("axis") && this.get("graphic"))
         {
-            this._drawGridlines.apply(this, arguments);
+            this._drawGridlines(w, h, startIndex, interval);
         }
     },
 
