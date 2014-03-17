@@ -105,27 +105,27 @@ Y.Crosshair.prototype = {
             graph,
             i,
             index = Math.floor((x / this.width) * this._xcoords.length),
-            len = series.length;
+            len = series.length,
+            isNumber;
+
         this._yline.set("transform", "translate(" + x + ")");
         if(series) {
             for(i = 0; i < len; i = i + 1) {
                 graph = series[i];
                 y = graph.coords[index];
+                isNumber = typeof y === "number";
+
                 if(graph.marker) {
-                    if(Y.Lang.isNumber(y)) {
-                        graph.marker.set("visible", true);
+                    if(isNumber) {
                         graph.marker.set("transform", "translate(" + x + ", " + y + ")");
-                    } else {
-                        graph.marker.set("visible", false);
                     }
+                    graph.marker.set("visible", isNumber);
                 }
                 if(graph.line) {
-                    if(Y.Lang.isNumber(y)) {
-                        graph.xLine.set("visible", true);
+                    if(isNumber) {
                         graph.xLine.set("transform", "translateY(" + y + ")");
-                    } else {
-                        graph.xLine.set("visible", false);
                     }
+                    graph.xLine.set("visible", isNumber);
                 }
             }
         }
