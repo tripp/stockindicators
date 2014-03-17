@@ -257,7 +257,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     startTimeline: function() {
         if(!this._runTimeline) {
             this._runTimeline = true;
-            this._timelineStart = (new Date()).valueOf() - 17;
+            this._timelineStart = +new Date() - 17;
             this.redraw();
         }
     },
@@ -290,7 +290,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             chart,
             i,
             len = charts.length,
-            endTime = (new Date()).valueOf();
+            endTime = +new Date();
         if(endTime >= this._timelineStart + 17) {
             for(i = 0; i < len; i = i + 1) {
                 chart = charts[i];
@@ -303,7 +303,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     legend.redraw();
                 }
             }
-            this._timelineStart = (new Date()).valueOf();
+            this._timelineStart = +new Date();
         }
         if(this._runTimeline && !this._autoDraw) {
             this._timelineId = this._onEnterFrame.apply(WINDOW, [function() {
