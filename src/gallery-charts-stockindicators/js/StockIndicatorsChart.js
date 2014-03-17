@@ -83,9 +83,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         }
         this._charts = charts;
         this._addEvents();
-        if(DOCUMENT && DOCUMENT.createElement("canvas")) {
-            this._printStockIndicators = new Y.StockIndicatorsPrinter(charts, this.get("width"), this.get("height"));
-        }
+        this._printStockIndicators = new Y.StockIndicatorsPrinter(charts, this.get("width"), this.get("height"));
     },
 
     /**
@@ -1144,15 +1142,10 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 }
             }
         }
-        if(this._startHandle) {
-            this._startHandle.detach();
         }
-        if(this._moveHandle) {
-            this._moveHandle.detach();
-        }
-        if(this._endHandle) {
-            this._endHandle.detach();
-        }
+        this._startHandle.detach();
+        this._moveHandle.detach();
+        this._endHandle.detach();
     },
 
     destructor: function() {
