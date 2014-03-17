@@ -256,7 +256,7 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
             len,
             width = this.get("width"),
             height = this.get("height");
-        if(Y.Lang.isArray(path)) {
+        if(path && path.length >= 0) {
             len = path.length;
             for(i = 0; i < len; i = i + 1) {
                 path[i].context.clearRect(0, 0, width, height);
@@ -276,7 +276,7 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
     _endPaths: function(path) {
         var i,
             len;
-        if(Y.Lang.isArray(path)) {
+        if(path && path.length >= 0) {
             len = path.length;
             for(i = 0; i < len; i = i + 1) {
                 path[i].context.lineWidth = path[i].lineWidth;

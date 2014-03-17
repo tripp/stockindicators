@@ -248,7 +248,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
     _endPaths: function(path) {
         var i,
             len;
-        if(Y.Lang.isArray(path)) {
+        if(path && path.length >= 0) {
             len = path.length;
             for(i = 0; i < len; i = i + 1) {
                 path[i].end();
