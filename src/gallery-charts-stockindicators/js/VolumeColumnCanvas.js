@@ -229,8 +229,7 @@ Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
                         this.set("y", node.get("y"));
                         this.set("width", node.get("width"));
                         this.set("height", node.get("height"));
-                        node = node.get("node");
-                        node = node ? node.parentNode : null;
+                        node = node._node ? node.parentNode : null;
                     } else if(node._node) {
                         node = node._node;
                     }

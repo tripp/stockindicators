@@ -308,8 +308,7 @@ Y.GridlinesCanvas = Y.Base.create("gridlinesCanvas", Y.Gridlines, [], {
                     if(node instanceof Y.Graphic) {
                         this.set("x", node.get("x"));
                         this.set("y", node.get("y"));
-                        node = node.get("node");
-                        node = node ? node.parentNode : null;
+                        node = node._node ? node.parentNode : null;
                     } else if(node._node) {
                         node = node._node;
                     }
