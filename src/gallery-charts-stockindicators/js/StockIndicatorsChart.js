@@ -360,13 +360,20 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             valueLen,
             valueKey,
             groupMarkers,
-            nomarkers = ["candlestick", "line", "ohlc", "volumecolumn", "multipleline"];
+            nomarkers = {
+                "candlestick": true,
+                "line": true,
+                "ohlc": true,
+                "volumecolumn": true,
+                "multipleline": true
+            };
         for(indIter = 0; indIter < indLen; indIter = indIter + 1) {
             indicator = indicators[indIter];
             valueKey = indicator.valueKey;
             indicatorType = indicator.type;
+
             if(indicatorType === "candlestick" || typeof valueKey === "string") {
-                groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                 seriesConfig = {
                     groupMarkers: groupMarkers,
                     type: indicator.type,
@@ -383,10 +390,10 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                         yKey: indicator.valueKey[valueIter]
                     };
                     if(typeof indicatorType === "string") {
-                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                        seriesConfig.groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                         seriesConfig.type = indicatorType;
                     } else {
-                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
+                        seriesConfig.groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
                         if(indicatorType[valueIter] === "multipleline" && config.threshold) {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
@@ -814,12 +821,13 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             graph,
             key,
             crosshairKey,
-            validKeys = config.keys;
+            validKeys = Y.Array.hash(config.keys);
+
         for(key in graphs) {
             if(graphs.hasOwnProperty(key)){
                 crosshairKey = key === "quote" ? "close" : key;
                 graph = graphs[key];
-                if(Y.Array.indexOf(validKeys, crosshairKey) > -1) {
+                if(validKeys[crosshairKey]) {
                     series = {
                         marker: {
                             shape: "circle",
