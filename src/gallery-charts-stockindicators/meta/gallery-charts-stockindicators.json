@@ -9,6 +9,7 @@
             "series-marker",
             "series-column",
             "series-candlestick",
+            "series-ohlc",
             "series-area"
         ]
     }
