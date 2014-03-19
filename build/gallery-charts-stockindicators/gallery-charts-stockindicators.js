@@ -4011,6 +4011,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @private
      */
     _graphMap: {
+        ohlc: Y.OHLCSeries,
+        area: Y.AreaSeries,
         line: Y.LineSeries,
         marker: Y.MarkerSeries,
         column: Y.ColumnSeries,
@@ -4058,7 +4060,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             indicator = indicators[indIter];
             valueKey = indicator.valueKey;
             indicatorType = indicator.type;
-            if(indicatorType === "candlestick" || typeof valueKey === "string") {
+            if(indicatorType === "candlestick" || indicatorType === "ohlc" || typeof valueKey === "string") {
                 groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
                 seriesConfig = {
                     groupMarkers: groupMarkers,
@@ -4155,6 +4157,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     };
                 break;
                 case "candlestick" :
+                case "ohlc" :
                     series.styles = {
                         upcandle: {
                             fill: {
@@ -5101,6 +5104,7 @@ Y.StockIndicatorsSpark.prototype = {
         "series-marker",
         "series-column",
         "series-candlestick",
+        "series-ohlc",
         "series-area"
     ]
 });
