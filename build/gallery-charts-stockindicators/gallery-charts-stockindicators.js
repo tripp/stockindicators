@@ -4014,6 +4014,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         ohlc: Y.OHLCSeries,
         area: Y.AreaSeries,
         line: Y.LineSeries,
+        combo: Y.ComboSeries,
         marker: Y.MarkerSeries,
         column: Y.ColumnSeries,
         candlestick: Y.CandlestickSeries,
@@ -4148,6 +4149,19 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                             color: colors[series.yKey]
                         }
                     };
+                break;
+                case "combo" :
+                    series.styles = {
+                        line: {
+                            weight: config.lineWidth,
+                            color: colors[series.yKey].line
+                        },
+                        area: {
+                            color: colors[series.yKey].area
+                        }
+                    },
+                    series.showMarkers = false;
+                    series.showAreaFill = true;
                 break;
                 case "multipleline" :
                     series.styles = {
@@ -4495,7 +4509,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      * @return Crosshair
      * @private
      */
-    _addCrosshair: function(config, colors, graphs,  cb) {
+    _addCrosshair: function(config, colors, graphs, cb) {
         var crosshair,
             crosshaircategory = {
                 stroke: {
@@ -4508,12 +4522,17 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             drawHorizontal = config.drawHorizontal,
             graph,
             key,
+            color,
             crosshairKey,
             validKeys = config.keys;
         for(key in graphs) {
             if(graphs.hasOwnProperty(key)){
                 crosshairKey = key === "quote" ? "close" : key;
                 graph = graphs[key];
+                color = colors[crosshairKey];
+                if(color && typeof color === "object" && graph.get("type") === "combo") {
+                    color = color.line;
+                }
                 if(Y.Array.indexOf(validKeys, crosshairKey) > -1) {
                     series = {
                         marker: {
@@ -4521,7 +4540,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                             width: config.dotDiameter,
                             height: config.dotDiameter,
                             fill: {
-                                color: config.color ? config.color : colors[crosshairKey]
+                                color: config.color ? config.color : color
                             },
                             stroke: {
                                 weight: 0
@@ -4532,7 +4551,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     if(drawHorizontal) {
                         series.line = {
                             stroke: {
-                                color: config.color ? config.color : colors[crosshairKey]
+                                color: config.color ? config.color : color
                             }
                         };
 
@@ -5105,6 +5124,7 @@ Y.StockIndicatorsSpark.prototype = {
         "series-column",
         "series-candlestick",
         "series-ohlc",
-        "series-area"
+        "series-area",
+        "series-combo"
     ]
 });
