@@ -10,7 +10,8 @@
             "series-column",
             "series-candlestick",
             "series-ohlc",
-            "series-area"
+            "series-area",
+            "series-combo"
         ]
     }
 }
