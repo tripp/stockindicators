@@ -19,6 +19,7 @@
                 "GridlinesCanvas.js",
                 "StockIndicatorsLegend.js",
                 "StockIndicatorsAxisLegend.js",
+                "StockIndicatorsCanvasAxisLegend.js",
                 "StockIndicatorsPrinter.js",
                 "StockIndicatorsChart.js",
                 "StockIndicatorsSpark.js"

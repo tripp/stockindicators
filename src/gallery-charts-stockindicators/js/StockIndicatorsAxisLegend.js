@@ -93,10 +93,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
      * @private
      */
     initializer: function(cfg) {
-        var previousClose = cfg.previousClose,
-            indicatorItems = cfg.indicatorItems,
-            interactiveItem = cfg.interactiveItem,
-            axis = cfg.axis,
+        var axis = cfg.axis,
             key,
             styles = this._getDefaultStyles(),
             newStyles;
@@ -126,16 +123,30 @@ Y.StockIndicatorsAxisLegend.prototype = {
                 this._styles.arrow[key] = newStyles.arrow[key];
             }
         }
+        this._biggestText = newStyles.biggestText;
+        this._createIndicators(cfg);
+    },
+
+    /**
+     * Creates the indicator items for legend.
+     *
+     * @method _createIndicators
+     * @param {Object} cfg The configuration object
+     * @private
+     */
+    _createIndicators: function(cfg) {
+        var previousClose = cfg.previousClose,
+            indicatorItems = cfg.indicatorItems,
+            interactiveItem = cfg.interactiveItem;
         if(previousClose) {
             this._previousClose = this._getPreviousClose(previousClose);
         }
         if(indicatorItems) {
-            this._indicatorItems = this._initalizeIndicatorItems(indicatorItems);
+            this._indicatorItems = this._initializeIndicatorItems(indicatorItems);
         }
         if(interactiveItem) {
             this._interactiveItem = this._getInteractiveItem(interactiveItem);
         }
-
     },
 
     /**
@@ -152,6 +163,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
         var styles = this._styles,
             labelStyles = styles.label,
             arrowStyles = styles.arrow,
+            arrowWidth,
             axis = this._axis,
             maxLabel = DOCUMENT.createElement("span"),
             minLabel = DOCUMENT.createElement("span"),
@@ -162,6 +174,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
             container = DOCUMENT.createElement("div"),
             arrow = DOCUMENT.createElement("span"),
             key,
+            biggestText,
             minLabelWidth,
             maxLabelWidth,
             borderTopWidth,
@@ -196,11 +209,13 @@ Y.StockIndicatorsAxisLegend.prototype = {
             Y.Event.purgeElement(minLabel, true);
             minLabel.parentNode.removeChild(minLabel);
             width = maxLabelWidth;
+            biggestText = maxText;
         } else {
             axis._removeChildren(maxLabel);
             Y.Event.purgeElement(maxLabel, true);
             maxLabel.parentNode.removeChild(maxLabel);
             width = minLabelWidth;
+            biggestText = minText;
         }
         width = Math.max(parseFloat(maxLabel.offsetWidth), parseFloat(minLabel.offsetWidth));
         borderRightWidth = (height/13 * 7) + "px";
@@ -212,7 +227,8 @@ Y.StockIndicatorsAxisLegend.prototype = {
         arrow.style.borderBottomWidth = borderBottomWidth;
 
         container.appendChild(arrow);
-        width = width + parseFloat(arrow.offsetWidth);
+        arrowWidth = parseFloat(arrow.offsetWidth);
+        width = width + arrowWidth;
         axis._removeChildren(container);
         Y.Event.purgeElement(container, true);
         container.parentNode.removeChild(container);
@@ -223,8 +239,10 @@ Y.StockIndicatorsAxisLegend.prototype = {
             arrow: {
                 borderRightWidth: borderRightWidth,
                 borderBottomWidth: borderBottomWidth,
-                borderTopWidth: borderTopWidth
-            }
+                borderTopWidth: borderTopWidth,
+                width: arrowWidth
+            },
+            biggestText: biggestText
         };
     },
 
@@ -358,7 +376,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
      * @return Object
      * @private
      */
-    _initalizeIndicatorItems: function(indicatorItems) {
+    _initializeIndicatorItems: function(indicatorItems) {
         var className = "stockIndicatorsIndicatorLabel",
             styles = this._styles,
             labelStyles = styles.label,
