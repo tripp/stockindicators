@@ -3731,8 +3731,10 @@ Y.StockIndicatorsPrinter.prototype = {
             axesConfigs = [],
             graphConfigs = [],
             graphDimensions = [],
+            legendConfigs = [],
             axes,
             gridlines,
+            legends,
             graphs;
 
         canvas.width = this._width;
@@ -3742,6 +3744,7 @@ Y.StockIndicatorsPrinter.prototype = {
             gridlinesConfigs.push(chart.gridlinesConfig);
             axesConfigs.push(chart.axesConfig);
             graphConfigs.push(chart.seriesCollection);
+            legendConfigs.push(chart.legendConfig);
             graphDimensions.push({
                 x: chart.graphX,
                 y: chart.graphY,
@@ -3752,8 +3755,9 @@ Y.StockIndicatorsPrinter.prototype = {
 
         axes = this._getAxes(axesConfigs);
         gridlines = this._getGridlines(gridlinesConfigs, axes);
+        legends = this._getLegends(legendConfigs);
         graphs = this._getGraphs(graphConfigs, graphDimensions);
-        canvas = this._printItems(axes, gridlines, graphs, canvas, context, len);
+        canvas = this._printItems(axes, gridlines, legends, graphs, canvas, context, len);
         return canvas;
     },
 
@@ -3764,6 +3768,7 @@ Y.StockIndicatorsPrinter.prototype = {
      * @param {Array} axes An array of object, each of which contain a numeric and date  axis instance.
      * @param {Gridlines} gridlines An array of objects, each of which contain a horizontal and vertical canvas
      * based gridlines instance.
+     * @param {Array} legends An array containing a legend for each chart instance.
      * @param {Array} graphs An array containing arrays of graphs for each chart instance.
      * @param {Canvas} canvas A canvas instance in which the other canvases will be added to.
      * @param {2dContext} context The 2d context for the canvas instance.
@@ -3771,7 +3776,7 @@ Y.StockIndicatorsPrinter.prototype = {
      * @return Canvas
      * @private
      */
-    _printItems: function(axes,  gridlines, graphs, canvas, context, len) {
+    _printItems: function(axes,  gridlines, legends, graphs, canvas, context, len) {
         var i,
             j,
             pathLen,
@@ -3779,6 +3784,7 @@ Y.StockIndicatorsPrinter.prototype = {
             dateAxis,
             numericAxis,
             gridline,
+            legend,
             graph,
             x,
             y,
@@ -3789,6 +3795,7 @@ Y.StockIndicatorsPrinter.prototype = {
         for(i = 0; i < len; i = i + 1) {
             axis = axes[i];
             gridline = gridlines[i];
+            legend = legends[i];
             dateAxis = axis.date;
             numericAxis = axis.numeric;
             if(gridline) {
@@ -3808,6 +3815,9 @@ Y.StockIndicatorsPrinter.prototype = {
                 if(numericAxis) {
                     context.drawImage(numericAxis._path, numericAxis.get("x") - numericAxis._xOffset, numericAxis.get("y") - numericAxis._yOffset);
                 }
+            }
+            if(legend) {
+                context.drawImage(legend._canvas, 0, 0);
             }
         }
         len = graphs.length;
@@ -3901,6 +3911,28 @@ Y.StockIndicatorsPrinter.prototype = {
             });
         }
         return gridlines;
+    },
+
+    /**
+     * Returns an array of canvas based legends for use in image conversion.
+     *
+     * @method _getLegends
+     * @param {Array} configs An array of legend config objects.
+     * @return Array
+     * @private
+     */
+    _getLegends: function(configs) {
+        var legend,
+            legends = [],
+            i,
+            len = configs.length,
+            config;
+        for(i = 0; i < len; i = i + 1) {
+            config = configs[i];
+            legend = new Y.StockIndicatorsCanvasAxisLegend(config);
+            legends.push(legend);
+        }
+        return legends;
     },
 
     /**
@@ -5005,6 +5037,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             graphHeight: graphConfig.height,
             graphX: graphConfig.x,
             graphY: graphConfig.y,
+            legendConfig: config.legend,
             seriesCollection: seriesCollection
         };
         //repaint the gridlines and graph
