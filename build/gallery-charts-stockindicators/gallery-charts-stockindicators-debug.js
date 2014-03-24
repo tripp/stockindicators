@@ -4083,6 +4083,20 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     },
 
     /**
+     * Returns a Canvas with the chart drawn into it.
+     *
+     * @method getChartCanvas
+     * @return Canvas
+     */
+    getChartCanvas: function() {
+        var canvas;
+        if(this._printStockIndicators) {
+            canvas = this._printStockIndicators.getChartCanvas();
+        }
+        return canvas;
+    },
+
+    /**
      * Event handler for mouse and touch events.
      *
      * @method _eventDispatcher
