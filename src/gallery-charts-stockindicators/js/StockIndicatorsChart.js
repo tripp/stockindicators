@@ -1057,6 +1057,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             graphHeight: graphConfig.height,
             graphX: graphConfig.x,
             graphY: graphConfig.y,
+            legendConfig: config.legend,
             seriesCollection: seriesCollection
         };
         //repaint the gridlines and graph
