@@ -50,6 +50,17 @@ Y.StockIndicatorsPrinter.prototype = {
      * @return String
      */
     getDataURI: function() {
+        var canvas = this.getChartCanvas();
+        return canvas.toDataURL();
+    },
+
+    /**
+     * Builds canvas based chart components and renders them into a canvas.
+     *
+     * @method getChartCanvas
+     * @return Canvas
+     */
+    getChartCanvas: function() {
         var charts = this._charts,
             chart,
             i,
@@ -83,7 +94,7 @@ Y.StockIndicatorsPrinter.prototype = {
         gridlines = this._getGridlines(gridlinesConfigs, axes);
         graphs = this._getGraphs(graphConfigs, graphDimensions);
         canvas = this._printItems(axes, gridlines, graphs, canvas, context, len);
-        return canvas.toDataURL();
+        return canvas;
     },
 
     /**
