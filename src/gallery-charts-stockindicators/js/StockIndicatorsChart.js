@@ -1151,7 +1151,6 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 }
             }
         }
-        }
         this._startHandle.detach();
         this._moveHandle.detach();
         this._endHandle.detach();

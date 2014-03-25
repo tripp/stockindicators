@@ -173,7 +173,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                         m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
                         intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
                         intersectY = thresholdCoords[thresholdIndex];
-                        if(isNumber(lastPathIndex)) {
+                        if(typeof lastPathIndex === "number") {
                             this._lineTo(paths[lastPathIndex], intersectX, intersectY);
                         }
                         this._moveTo(paths[pathIndex], intersectX, intersectY);
