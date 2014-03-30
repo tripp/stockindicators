@@ -26,6 +26,7 @@ Y.StockIndicatorsPrinter.prototype = {
      * @private
      */
     _graphClassMap: {
+        thresholdline: Y.ThresholdCanvasLineSeries,
         multipleline: Y.MultipleLineCanvasSeries,
         volumecolumn: Y.VolumeColumnCanvas
     },

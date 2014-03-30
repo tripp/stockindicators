@@ -342,7 +342,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         column: Y.ColumnSeries,
         candlestick: Y.CandlestickSeries,
         multipleline: Y.MultipleLineSeries,
-        volumecolumn: Y.VolumeColumn
+        volumecolumn: Y.VolumeColumn,
+        thresholdline: Y.ThresholdLineSeries
     },
 
     /**
@@ -407,7 +408,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     } else {
                         seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
-                        if(indicatorType[valueIter] === "multipleline" && config.threshold) {
+                        if(indicatorType[valueIter] === "multipleline" && config.threshold && config.range === "1d") {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
                         } else if(indicatorType[valueIter] === "volumecolumn") {
                             seriesConfig.previousClose = parseFloat(indicator.previousClose);
@@ -489,8 +490,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 case "multipleline" :
                     series.styles = {
                         weight: config.lineWidth,
-                        colors: config.range === "1d" ? [colors.quoteLineUp, colors.quoteLineDown] : [colors.quoteLine],
-                        threshold: config.threshold
+                        color: config.range === "1d" ? [colors.quoteLineUp, colors.quoteLineDown] : [colors.quoteLine],
+                        thresholds: config.threshold
                     };
                 break;
                 case "candlestick" :
@@ -1012,7 +1013,11 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             axesConfig,
             crosshairConfig,
             gridlinesConfig,
-            seriesCollection;
+            thresholdStyles = config.threshold,
+            thresholds,
+            previousClose = parseFloat(config.previousClose),
+            seriesCollection,
+            thresholdConfig;
         config.horizontalGridlines.y = graphConfig.y;
         config.verticalGridlines.x = graphConfig.x;
 
@@ -1056,6 +1061,20 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             config.legend.width = graphConfig.width;
         }
         legend = this._addLegend(config, cb);
+        if(thresholdStyles && typeof previousClose === "number") {
+            thresholdConfig = {
+                type: "thresholdline",
+                thresholds: [previousClose],
+                graphic: graphic,
+                yAxis: axes.numeric,
+                xAxis: axes.date,
+                styles: {
+                    thresholds: thresholdStyles
+                }
+            };
+            thresholds = new Y.ThresholdLineSeries(thresholdConfig);
+            seriesCollection.push(thresholdConfig);
+        }
         chart = {
             axes: axes,
             graphic: graphic,
@@ -1072,7 +1091,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             graphX: graphConfig.x,
             graphY: graphConfig.y,
             legendConfig: config.legend,
-            seriesCollection: seriesCollection
+            seriesCollection: seriesCollection,
+            thresholds: thresholds
         };
         //repaint the gridlines and graph
         graphic._redraw();
