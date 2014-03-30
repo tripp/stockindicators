@@ -492,6 +492,7 @@ Y.IntradayAxis = Y.Base.create("intradayAxis", Y.CategoryAxis, [Y.IntradayAxisBa
          * @protected
          */
         destructor: function() {
+            var parentNode;
             if(this._path) {
                 if(this._context) {
                     this._context.clearRect(
@@ -501,7 +502,10 @@ Y.IntradayAxis = Y.Base.create("intradayAxis", Y.CategoryAxis, [Y.IntradayAxisBa
                         this.get("height") + this._heightOffset
                     );
                 }
-                this._path.parentNode.removeChild(this._path);
+                parentNode = this._path.parentNode;
+                if(parentNode) {
+                    parentNode.removeChild(this._path);
+                }
             }
         }
     }), {
@@ -1078,26 +1082,38 @@ Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
     }
 });
 /**
- * Provides functionality for creating a line series with alternating colors based on thresholds.
+ * Provides functionality for creating threshold lines.
  *
  * @module charts
- * @submodule series-line-multiple
+ * @submodule series-threshold-line-util
  */
 /**
- * The MultipleLineSeries class renders quantitative data on a graph by connecting relevant data points and
- * using different colors based on a defined threshold value.
+ * The ThresholdLines class contains methods for drawing lines relative to a y-coordinate on a cartesian
+ * scale.
  *
- * @class MultipleLineSeries
- * @extends CartesianSeries
+ * @class ThresholdLines
+ * @extends Lines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
- * @submodule series-line-multiple
+ * @submodule series-threshold-line-util
  */
-Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y.Lines],  {
-    drawSeries: function() {
-        this._drawLines();
-    },
+Y.ThresholdLines = function() {
+    Y.ThresholdLines.superclass.constructor.apply(this, arguments);
+};
 
+Y.ThresholdLines.NAME = "thresholdLines";
+
+Y.ThresholdLines.ATTRS =  {
+    /**
+     * An array of thresholds. Used to define where lines would change colors.
+     *
+     * @attribute thresholds
+     * @type Array
+     */
+    thresholds: {}
+};
+
+Y.extend(Y.ThresholdLines, Y.Lines, {
     /**
      * Returns an array of path elements in which to draw the lines.
      *
@@ -1111,21 +1127,25 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         var graphic,
             path,
             i,
-            colors,
-            alphas,
-            weight;
+            color,
+            alpha,
+            weight,
+            hasAlphaArray,
+            hasColorArray;
         if(!paths) {
             graphic = this.get("graphic") || this.get("graph").get("graphic");
             paths = [];
-            colors = styles.colors;
-            alphas = styles.alphas;
+            color = styles.color;
+            alpha = styles.alpha;
             weight = styles.weight;
+            hasAlphaArray = typeof alpha === "object" && alpha.length && alpha.length > 0;
+            hasColorArray = typeof color === "object" && color.length && color.length > 0;
             for(i = 0; i < len; i = i + 1) {
                 path = graphic.addShape({
                     type: "path",
                     stroke: {
-                        color: colors[i % colors.length],
-                        opacity: alphas[i % alphas.length],
+                        color: hasColorArray ?  color[i % color.length] : color,
+                        opacity: hasAlphaArray ? alpha[i % alpha.length] : alpha,
                         weight: weight
                     }
                 });
@@ -1138,6 +1158,18 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         return paths;
     },
 
+    /**
+     * Returns the coordinates corresponding to a value on the y-axis.
+     *
+     * @method _getThresholdCoords
+     * @param {Array} thresholds An array of values corresponding to a threshold.
+     * @param {Number} len The number of items in the threshold array.
+     * @param {Object} styles Styles for the graph.
+     * @param {Number} min The minimum value on the axis.
+     * @param {Number} max The maximum value on the axis.
+     * @param {Number} edgeOffset The distance offset from the edge of the axis.
+     * @return Array
+     */
     _getThresholdCoords: function(thresholds, len, styles, min, max, edgeOffset) {
         var yAxis = this.get("yAxis"),
             i,
@@ -1155,6 +1187,16 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         return thresholdCoords;
     },
 
+    /**
+     * Draws lines on a graph based on threshold coordinates.
+     *
+     * @method _drawThresholLines
+     * @param {Array} paths An array of path instances in which to use for drawing the lines.
+     * @param {Array} thresholdCoords An array of coordinates in which to plot the lines.
+     * @param {Number} len The length of the thresholdCoords array.
+     * @param {Object} styles Style properties for the lines.
+     * @private
+     */
     _drawThresholdLines: function(paths, thresholdCoords, len, styles) {
         var path,
             i,
@@ -1180,95 +1222,6 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
             }
             this._endPaths(path);
         }
-    },
-
-    /**
-     * Draws lines for the series.
-     *
-     * @method drawLines
-     * @private
-     */
-    _drawLines: function()
-    {
-        if(this.get("xcoords").length < 1)
-        {
-            return;
-        }
-        var isNumber = Y.Lang.isNumber,
-            direction = this.get("direction"),
-            len,
-            lastPointValid,
-            pointValid,
-            noPointsRendered = true,
-            lastValidX,
-            lastValidY,
-            nextX,
-            nextY,
-            intersectX,
-            intersectY,
-            i,
-            m,
-            thresholds = this.get("thresholds"),
-            thresholdsLength = thresholds ? thresholds.length : 0,
-            pathIndex,
-            lastPathIndex,
-            thresholdIndex,
-            styles = this.get("styles"),
-            paths = this._getPaths(this._paths, styles, thresholdsLength + 1),
-            yAxis = this.get("yAxis"),
-            yMin = yAxis.get("minimum"),
-            yMax = yAxis.get("maximum"),
-            yEdgeOffset = yAxis.get("edgeOffset"),
-            thresholdCoords = this._getThresholdCoords(thresholds, thresholdsLength, styles, yMin, yMax, yEdgeOffset),
-            thresholdPaths = this._getPaths(this._thresholdPaths, styles.thresholds, thresholdsLength),
-            xcoords = this.get("xcoords"),
-            ycoords = this.get("ycoords");
-        this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
-        this._paths = paths;
-        this._thresholdPaths = thresholdPaths;
-        len = direction === "vertical" ? ycoords.length : xcoords.length;
-        for(i = 0; i < len; i = i + 1)
-        {
-            nextX = Math.round(xcoords[i] * 1000)/1000;
-            nextY = Math.round(ycoords[i] * 1000)/1000;
-            pointValid = isNumber(nextX) && isNumber(nextY);
-            if(pointValid) {
-                thresholdIndex = 0;
-                if(thresholds) {
-                    for(pathIndex = 0; pathIndex < thresholdsLength; pathIndex = pathIndex + 1) {
-                        if(nextY <= thresholdCoords[pathIndex]) {
-                            break;
-                        } else {
-                            thresholdIndex = pathIndex;
-                        }
-                    }
-                } else {
-                    pathIndex = 0;
-                }
-                if(noPointsRendered) {
-                    noPointsRendered = false;
-                    this._moveTo(paths[pathIndex], nextX, nextY);
-                } else {
-                    if(pathIndex !== lastPathIndex) {
-                        m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
-                        intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
-                        intersectY = thresholdCoords[thresholdIndex];
-                        if(isNumber(lastPathIndex)) {
-                            this._lineTo(paths[lastPathIndex], intersectX, intersectY);
-                        }
-                        this._moveTo(paths[pathIndex], intersectX, intersectY);
-                    }
-                    this._lineTo(paths[pathIndex], nextX, nextY);
-                }
-                lastValidX = nextX;
-                lastValidY = nextY;
-                lastPointValid = true;
-                lastPathIndex = pathIndex;
-            } else {
-                lastPointValid = pointValid;
-            }
-        }
-        this._endPaths(paths);
     },
 
     /**
@@ -1346,12 +1299,9 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
      */
     _getDefaultStyles: function() {
         var styles = {
-                alphas: [1],
-                weight: 6,
-                colors: this._defaultLineColors.concat(),
                 thresholds: {
-                    colors: ["#999"],
-                    alphas: [1],
+                    color: "#999",
+                    alpha: 1,
                     weight: 1,
                     lineType: "dashed",
                     dashLength:5,
@@ -1359,39 +1309,58 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                 }
             };
         return Y.merge(Y.Renderer.prototype._getDefaultStyles(), styles);
-    }
-}, {
-    ATTRS: {
-        /**
-         * An array of thresholds. Used to define where lines would change colors.
-         *
-         * @attribute thresholds
-         * @type Array
-         */
-        thresholds: {}
+    },
+    
+    /**
+     * Destructor implementation for ThresholdLines.
+     *
+     * @method destructor
+     * @protected
+     */
+    destructor: function() {
+        var path,
+            width = this.get("width"),
+            height = this.get("height");
+        if(this._paths) {
+            while(this._paths.length > 0) {
+                path = this._paths.pop();
+                if(path instanceof Y.Shape) {
+                    path.destroy();
+                } else {
+                     if(path.context) {
+                        path.context.clearRect(0, 0, width, height);
+                     }
+                     if(path.canvas) {
+                        path.canvas.parentNode.removeChild(path.canvas);
+                     }
+                }
+            }
+        }
     }
 });
 /**
- * Provides functionality for creating a line series with alternating colors based on thresholds.
+ * Provides functionality for creating threshold lines.
  *
  * @module charts
- * @submodule series-line-multiple
+ * @submodule series-threshold-canvas-line-util
  */
 /**
- * The MultipleLineCanvasSeries class renders quantitative data on a graph by connecting relevant data points and
- * using different colors based on a defined threshold value.
+ * The ThresholdCanvasLines class contains methods for drawing lines relative to a y-coordinate on a cartesian
+ * scale.
  *
- * @class MultipleLineCanvasSeries
- * @extends CartesianSeries
+ * @class ThresholdCanvasLines
+ * @extends Lines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
- * @submodule series-line-multiple
+ * @submodule series-threshold-canvas-line-util
  */
-Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.MultipleLineSeries, [],  {
-    drawSeries: function() {
-        this._drawLines();
-    },
+Y.ThresholdCanvasLines = function() {
+    Y.ThresholdCanvasLines.superclass.constructor.apply(this, arguments);
+};
 
+Y.ThresholdCanvasLines.NAME = "thresholdCanvasLines";
+
+Y.extend(Y.ThresholdCanvasLines,  Y.ThresholdLines, {
     /**
      * Returns an array of path elements in which to draw the lines.
      *
@@ -1405,19 +1374,21 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
         var node,
             path,
             i,
-            colors,
+            color,
             weight,
             canvas,
             context,
             width = this.get("width"),
             height = this.get("height"),
+            isColorArray,
             x = this.get("x") + "px",
             y = this.get("y") + "px";
         if(!paths) {
             node = this.get("node");
             paths = [];
-            colors = styles.colors;
+            color = styles.color;
             weight = styles.weight;
+            isColorArray = typeof color === "object" && color.length && color.length > 0;
             for(i = 0; i < len; i = i + 1) {
                 canvas = DOCUMENT.createElement("canvas");
                 context = canvas.getContext("2d");
@@ -1432,7 +1403,7 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
                 path = {
                     canvas: canvas,
                     context: context,
-                    strokeStyle: colors[i % colors.length],
+                    strokeStyle: isColorArray ? color[i % color.length] : color,
                     lineWidth: weight
                 };
                 paths.push(path);
@@ -1444,143 +1415,22 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
         return paths;
     },
 
-    _getThresholdCoords: function(thresholds, len, styles, min, max, edgeOffset) {
-        var yAxis = this.get("yAxis"),
-            i,
-            height = this.get("height"),
-            padding = styles.padding,
-            offset = padding.top + edgeOffset,
-            thresholdCoords = [];
-        height = height -  padding.top - padding.bottom - edgeOffset * 2;
-        offset = height - offset;
-        for(i = 0; i < len; i = i + 1) {
-            thresholdCoords.push(
-                Math.round(yAxis._getCoordFromValue(min, max, height, thresholds[i], offset, true) * 1000)/1000
-            );
-        }
-        return thresholdCoords;
-    },
-
-    _drawThresholdLines: function(paths, thresholdCoords, len, styles) {
-        var path,
-            i,
-            xAxis = this.get("xAxis"),
-            edgeOffset = xAxis.get("edgeOffset"),
-            width = this.get("width"),
-            thresholdsStyles = styles.thresholds,
-            lineType = thresholdsStyles.lineType,
-            dashLength = thresholdsStyles.dashLength,
-            gapSpace = thresholdsStyles.gapSpace,
-            startX = styles.padding.left + edgeOffset,
-            endX = width - edgeOffset - styles.padding.right,
-            y;
-        for(i = 0; i < len; i = i + 1) {
-            y = thresholdCoords[i];
-            path = paths[i];
-            this._clearPaths(path);
-            this._moveTo(path, startX, y);
-            if(lineType === "dashed") {
-                this.drawDashedLine(path, startX, y, endX, y, dashLength, gapSpace);
-            } else {
-                this._lineTo(path, endX, y);
-            }
-            this._endPaths(path);
-        }
-    },
-
     /**
-     * Draws lines for the series.
+     * Draws a dashed line between two points.
      *
-     * @method drawLines
+     * @method drawDashedLine
+     * @param {Object} path Reference to the object in which the line will be drawn.
+     * @param {Number} xStart	The x position of the start of the line
+     * @param {Number} yStart	The y position of the start of the line
+     * @param {Number} xEnd		The x position of the end of the line
+     * @param {Number} yEnd		The y position of the end of the line
+     * @param {Number} dashSize	the size of dashes, in pixels
+     * @param {Number} gapSize	the size of gaps between dashes, in pixels
      * @private
      */
-    _drawLines: function()
-    {
-        if(this.get("xcoords").length < 1)
-        {
-            return;
-        }
-        var isNumber = Y.Lang.isNumber,
-            direction = this.get("direction"),
-            len,
-            lastPointValid,
-            pointValid,
-            noPointsRendered = true,
-            lastValidX,
-            lastValidY,
-            nextX,
-            nextY,
-            intersectX,
-            intersectY,
-            i,
-            m,
-            thresholds = this.get("thresholds"),
-            thresholdsLength = thresholds ? thresholds.length : 0,
-            pathIndex,
-            lastPathIndex,
-            thresholdIndex,
-            styles = this.get("styles"),
-            graphPaths = this._getPaths(this._graphPaths, styles, thresholdsLength + 1),
-            yAxis = this.get("yAxis"),
-            yMin = yAxis.get("minimum"),
-            yMax = yAxis.get("maximum"),
-            yEdgeOffset = yAxis.get("edgeOffset"),
-            thresholdCoords = this._getThresholdCoords(thresholds, thresholdsLength, styles, yMin, yMax, yEdgeOffset),
-            thresholdPaths = this._getPaths(this._thresholdPaths, styles.thresholds, thresholdsLength),
-            xcoords = this.get("xcoords"),
-            ycoords = this.get("ycoords");
-        this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
-        this._graphPaths = graphPaths;
-        this._thresholdPaths = thresholdPaths;
-        this._paths = this._graphPaths.concat(this._thresholdPaths);
-        len = direction === "vertical" ? ycoords.length : xcoords.length;
-        for(i = 0; i < len; i = i + 1)
-        {
-            nextX = Math.round(xcoords[i] * 1000)/1000;
-            nextY = Math.round(ycoords[i] * 1000)/1000;
-            pointValid = isNumber(nextX) && isNumber(nextY);
-            if(pointValid) {
-                thresholdIndex = 0;
-                if(thresholds) {
-                    for(pathIndex = 0; pathIndex < thresholdsLength; pathIndex = pathIndex + 1) {
-                        if(nextY <= thresholdCoords[pathIndex]) {
-                            break;
-                        } else {
-                            thresholdIndex = pathIndex;
-                        }
-                    }
-                } else {
-                    pathIndex = 0;
-                }
-                if(noPointsRendered) {
-                    noPointsRendered = false;
-                    this._moveTo(graphPaths[pathIndex], nextX, nextY);
-                } else {
-                    if(pathIndex !== lastPathIndex) {
-                        m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
-                        intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
-                        intersectY = thresholdCoords[thresholdIndex];
-                        if(isNumber(lastPathIndex)) {
-                            this._lineTo(graphPaths[lastPathIndex], intersectX, intersectY);
-                        }
-                        this._moveTo(graphPaths[pathIndex], intersectX, intersectY);
-                    }
-                    this._lineTo(graphPaths[pathIndex], nextX, nextY);
-                }
-                lastValidX = nextX;
-                lastValidY = nextY;
-                lastPointValid = true;
-                lastPathIndex = pathIndex;
-            } else {
-                lastPointValid = pointValid;
-            }
-        }
-        this._endPaths(graphPaths);
-    },
-
     drawDashedLine: function(path, xStart, yStart, xEnd, yEnd, dashSize, gapSize) {
         var context = path.context;
-        Y.MultipleLineCanvasSeries.superclass.drawDashedLine.apply(this, [
+        Y.ThresholdCanvasLines.superclass.drawDashedLine.apply(this, [
             context,
             xStart,
             yStart,
@@ -1661,28 +1511,6 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
             path.context.strokeStyle = path.strokeStyle;
             path.context.stroke();
         }
-    },
-
-    /**
-     * Destructor implementation for the MultipleLineCanvasSeries class.
-     *
-     * @method destructor
-     * @protected
-     */
-    destructor: function() {
-        var path,
-            width = this.get("width"),
-            height = this.get("height");
-        while(this._graphPaths.length > 0) {
-            path = this._graphPaths.pop();
-            path.context.clearRect(0, 0, width, height);
-            path.canvas.parentNode.removeChild(path.canvas);
-        }
-        while(this._thresholdPaths.length > 0) {
-            path = this._thresholdPaths.pop();
-            path.context.clearRect(0, 0, width, height);
-            path.canvas.parentNode.removeChild(path.canvas);
-        }
     }
 }, {
     ATTRS: {
@@ -1760,6 +1588,239 @@ Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.Multipl
         }
     }
 });
+/**
+ * Provides functionality for creating threshold lines.
+ *
+ * @module charts
+ * @submodule series-threshold-line
+ */
+/**
+ * The ThresholdLineSeries class renders lines corresponding to values across a y-axis.
+ *
+ * @class ThresholdLineSeries
+ * @extends SeriesBase
+ * @uses ThresholdLines
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ * @submodule series-threshold-line
+ */
+Y.ThresholdLineSeries = Y.Base.create("thresholdLineSeries", Y.SeriesBase, [Y.Lines, Y.ThresholdLines],  {
+    /**
+     * Draws the series.
+     *
+     * @method draw
+     * @protected
+     */
+    initializer: function()
+    {
+        var w = this.get("width"),
+            h = this.get("height"),
+            yAxis = this.get("yAxis");
+        if((isFinite(w) && isFinite(h) && w > 0 && h > 0) && yAxis) {
+            this.draw();
+        }
+    },
+
+    /**
+     * Draws lines for the series.
+     *
+     * @method drawSeries
+     * @private
+     */
+    draw: function()
+    {
+        var thresholds = this.get("thresholds"),
+            thresholdsLength = thresholds ? thresholds.length : 0,
+            styles = this.get("styles"),
+            yAxis = this.get("yAxis"),
+            yMin = yAxis.get("minimum"),
+            yMax = yAxis.get("maximum"),
+            yEdgeOffset = yAxis.get("edgeOffset"),
+            thresholdCoords = this._getThresholdCoords(thresholds, thresholdsLength, styles, yMin, yMax, yEdgeOffset),
+            thresholdPaths = this._getPaths(this._paths, styles.thresholds, thresholdsLength);
+        this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
+        this._paths = thresholdPaths;
+    }
+}, {
+    ATTRS: {
+        xAxis: {},
+
+        yAxis: {}
+    }
+});
+/**
+ * Provides functionality for creating threshold lines.
+ *
+ * @module charts
+ * @submodule series-threshold-canvas-line
+ */
+/**
+ * The ThresholdCanvasLineSeries class renders lines corresponding to values across a y-axis.
+ *
+ * @class ThresholdCanvasLineSeries
+ * @extends ThresholdLineSeries
+ * @uses ThresholdCanvasLines
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ * @submodule series-threshold-canvas-line
+ */
+Y.ThresholdCanvasLineSeries = Y.Base.create("thresholdCanvasLineSeries", Y.ThresholdLineSeries, [Y.ThresholdCanvasLines]);
+/**
+ * Provides functionality for creating a line series with alternating colors based on thresholds.
+ *
+ * @module charts
+ * @submodule series-line-multiple
+ */
+/**
+ * The MultipleLineSeries class renders quantitative data on a graph by connecting relevant data points and
+ * using different colors based on a defined threshold value.
+ *
+ * @class MultipleLineSeries
+ * @extends CartesianSeries
+ * @uses Lines
+ * @uses ThresholdLines
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ * @submodule series-line-multiple
+ */
+Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y.Lines, Y.ThresholdLines],  {
+    /**
+     * Draws lines for the series.
+     *
+     * @method drawSeries
+     * @private
+     */
+    drawSeries: function()
+    {
+        if(this.get("xcoords").length < 1)
+        {
+            return;
+        }
+        var isNumber = Y.Lang.isNumber,
+            direction = this.get("direction"),
+            len,
+            lastPointValid,
+            pointValid,
+            noPointsRendered = true,
+            lastValidX,
+            lastValidY,
+            nextX,
+            nextY,
+            intersectX,
+            intersectY,
+            i,
+            m,
+            thresholds = this.get("thresholds"),
+            thresholdsLength = thresholds ? thresholds.length : 0,
+            pathIndex,
+            lastPathIndex,
+            thresholdIndex,
+            styles = this.get("styles"),
+            drawThresholdLines = styles.thresholds.drawLines,
+            graphPaths = this._getPaths(this._graphPaths, styles, thresholdsLength + 1),
+            yAxis = this.get("yAxis"),
+            yMin = yAxis.get("minimum"),
+            yMax = yAxis.get("maximum"),
+            yEdgeOffset = yAxis.get("edgeOffset"),
+            thresholdCoords = this._getThresholdCoords(thresholds, thresholdsLength, styles, yMin, yMax, yEdgeOffset),
+            thresholdPaths,
+            xcoords = this.get("xcoords"),
+            ycoords = this.get("ycoords");
+        if(drawThresholdLines) {
+            thresholdPaths = this._getPaths(this._thresholdPaths, styles.thresholds, thresholdsLength);
+            this._drawThresholdLines(thresholdPaths, thresholdCoords, thresholdsLength, styles);
+        }
+        this._graphPaths = graphPaths;
+        this._thresholdPaths = thresholdPaths;
+        this._paths = this._graphPaths.concat(this._thresholdPaths ? this._thresholdPaths : []);
+     
+        len = direction === "vertical" ? ycoords.length : xcoords.length;
+        for(i = 0; i < len; i = i + 1)
+        {
+            nextX = Math.round(xcoords[i] * 1000)/1000;
+            nextY = Math.round(ycoords[i] * 1000)/1000;
+            pointValid = isNumber(nextX) && isNumber(nextY);
+            if(pointValid) {
+                thresholdIndex = 0;
+                if(thresholds) {
+                    for(pathIndex = 0; pathIndex < thresholdsLength; pathIndex = pathIndex + 1) {
+                        if(nextY <= thresholdCoords[pathIndex]) {
+                            break;
+                        } else {
+                            thresholdIndex = pathIndex;
+                        }
+                    }
+                } else {
+                    pathIndex = 0;
+                }
+                if(noPointsRendered) {
+                    noPointsRendered = false;
+                    this._moveTo(graphPaths[pathIndex], nextX, nextY);
+                } else {
+                    if(pathIndex !== lastPathIndex) {
+                        m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
+                        intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
+                        intersectY = thresholdCoords[thresholdIndex];
+                        if(isNumber(lastPathIndex)) {
+                            this._lineTo(graphPaths[lastPathIndex], intersectX, intersectY);
+                        }
+                        this._moveTo(graphPaths[pathIndex], intersectX, intersectY);
+                    }
+                    this._lineTo(graphPaths[pathIndex], nextX, nextY);
+                }
+                lastValidX = nextX;
+                lastValidY = nextY;
+                lastPointValid = true;
+                lastPathIndex = pathIndex;
+            } else {
+                lastPointValid = pointValid;
+            }
+        }
+        this._endPaths(graphPaths);
+    },
+
+    /**
+     * Gets the default value for the `styles` attribute.
+     *
+     * @method _getDefaultStyles
+     * @return Object
+     * @protected
+     */
+    _getDefaultStyles: function() {
+        var styles = {
+                alpha: 1,
+                weight: 6,
+                color: this._defaultLineColors.concat()
+            };
+        return Y.merge(Y.ThresholdLines.prototype._getDefaultStyles(), styles);
+    }
+});
+/**
+ * Provides functionality for creating a line series with alternating colors based on thresholds.
+ *
+ * @module charts
+ * @submodule series-canvas-line-multiple
+ */
+/**
+ * The MultipleLineCanvasSeries class renders quantitative data on a graph by connecting relevant data points and
+ * using different colors based on a defined threshold value.
+ *
+ * @class MultipleLineCanvasSeries
+ * @extends CartesianSeries
+ * @uses Lines
+ * @uses ThresholdLines
+ * @uses MultipleLineSeries
+ * @uses ThresholdCanvasLines
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ * @submodule series-canvas-line-multiple
+ */
+Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.CartesianSeries, [
+    Y.Lines,
+    Y.ThresholdLines,
+    Y.MultipleLineSeries,
+    Y.ThresholdCanvasLines
+]);
 /**
  * Allows for the creation of a visualization based on financial
  * indicators..
@@ -2991,6 +3052,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
         this.itemWidth = this.width;
         this.itemHeight = newStyles.height;
         this._contentWidth = cfg.contentWidth;
+        this._contentHeight = cfg.contentHeight;
         for(key in newStyles.arrow) {
             if(newStyles.arrow.hasOwnProperty(key)) {
                 this._styles.arrow[key] = newStyles.arrow[key];
@@ -3450,7 +3512,7 @@ Y.extend(Y.StockIndicatorsCanvasAxisLegend, Y.StockIndicatorsAxisLegend, {
             labelStyles = styles.label,
             canvas  = DOCUMENT.createElement("canvas");
         canvas.width = this._contentWidth;
-        canvas.height = this.height;
+        canvas.height = this._contentHeight;
         canvas.style.left = "0px";
         canvas.style.top = "0px";
         canvas.style.position = "absolute";
@@ -3639,7 +3701,7 @@ Y.extend(Y.StockIndicatorsCanvasAxisLegend, Y.StockIndicatorsAxisLegend, {
             canvas = this._canvas,
             context = this._context;
         if(context) {
-            context.clearRect(0, 0, this._contentWidth, this.height);
+            context.clearRect(0, 0, this._contentWidth, this._contentHeight);
         }
         if(canvas) {
             Y.Event.purgeElement(canvas, true);
@@ -3649,7 +3711,7 @@ Y.extend(Y.StockIndicatorsCanvasAxisLegend, Y.StockIndicatorsAxisLegend, {
         canvas = this._interactiveCanvas;
         context = this._interactiveContext;
         if(context) {
-            context.clearRect(0, 0, this._contentWidth, this.height);
+            context.clearRect(0, 0, this._contentWidth, this._contentHeight);
         }
         if(canvas) {
             Y.Event.purgeElement(canvas, true);
@@ -3686,6 +3748,7 @@ Y.StockIndicatorsPrinter.prototype = {
      * @private
      */
     _graphClassMap: {
+        thresholdline: Y.ThresholdCanvasLineSeries,
         multipleline: Y.MultipleLineCanvasSeries,
         volumecolumn: Y.VolumeColumnCanvas
     },
@@ -3758,6 +3821,7 @@ Y.StockIndicatorsPrinter.prototype = {
         legends = this._getLegends(legendConfigs);
         graphs = this._getGraphs(graphConfigs, graphDimensions);
         canvas = this._printItems(axes, gridlines, legends, graphs, canvas, context, len);
+        this._destroyItems(axes, gridlines, legends, graphs);
         return canvas;
     },
 
@@ -3837,6 +3901,66 @@ Y.StockIndicatorsPrinter.prototype = {
             }
         }
         return canvas;
+    },
+
+    /**
+     * Destroys items used in printing image.
+     *
+     * @method _destroyItems
+     * @param {Array} An array of objects container references to axis instances.
+     * @param {Array} An array of objects containing references to gridlines instances.
+     * @param {Array} An array of legend instances.
+     * @param {Array} An array of graph instances.
+     * @private
+     */
+    _destroyItems: function(axes, gridlines, legends, graphs) {
+        var i,
+            len = axes.length,
+            gridline,
+            horizontalGridlines,
+            verticalGridlines,
+            axis,
+            dateAxis,
+            numericAxis,
+            graph,
+            legend;
+        for(i = 0; i < len; i = i + 1) {
+            axis = axes[i];
+            numericAxis = axis.numeric;
+            dateAxis = axis.date;
+            if(numericAxis) {
+                numericAxis.destroy();
+            }
+            if(dateAxis) {
+                dateAxis.destroy();
+            }
+        }
+        len = gridlines.length;
+        for(i = 0; i < len; i = i + 1) {
+            gridline = gridlines[i];
+            horizontalGridlines = gridline.horizontal;
+            verticalGridlines = gridline.vertical;
+            if(horizontalGridlines) {
+                horizontalGridlines.remove();
+            }
+            if(verticalGridlines) {
+                verticalGridlines.remove();
+            }
+        }
+        len = graphs.length;
+        for(i = 0; i < len; i = i + 1) {
+            graph = graphs[i];
+            if(graph) {
+                graph.destroy();
+            }
+        }
+        len = legends.length;
+        for(i = 0; i < len; i = i + 1) {
+            legend = legends[i];
+            if(legend) {
+                legend.destroy();
+            }
+        }
     },
 
     /**
@@ -4322,7 +4446,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         column: Y.ColumnSeries,
         candlestick: Y.CandlestickSeries,
         multipleline: Y.MultipleLineSeries,
-        volumecolumn: Y.VolumeColumn
+        volumecolumn: Y.VolumeColumn,
+        thresholdline: Y.ThresholdLineSeries
     },
 
     /**
@@ -4387,7 +4512,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     } else {
                         seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
-                        if(indicatorType[valueIter] === "multipleline" && config.threshold) {
+                        if(indicatorType[valueIter] === "multipleline" && config.threshold && config.range === "1d") {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
                         } else if(indicatorType[valueIter] === "volumecolumn") {
                             seriesConfig.previousClose = parseFloat(indicator.previousClose);
@@ -4469,8 +4594,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 case "multipleline" :
                     series.styles = {
                         weight: config.lineWidth,
-                        colors: config.range === "1d" ? [colors.quoteLineUp, colors.quoteLineDown] : [colors.quoteLine],
-                        threshold: config.threshold
+                        color: config.range === "1d" ? [colors.quoteLineUp, colors.quoteLineDown] : [colors.quoteLine],
+                        thresholds: config.threshold
                     };
                 break;
                 case "candlestick" :
@@ -4992,7 +5117,11 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             axesConfig,
             crosshairConfig,
             gridlinesConfig,
-            seriesCollection;
+            thresholdStyles = config.threshold,
+            thresholds,
+            previousClose = parseFloat(config.previousClose),
+            seriesCollection,
+            thresholdConfig;
         config.horizontalGridlines.y = graphConfig.y;
         config.verticalGridlines.x = graphConfig.x;
 
@@ -5030,12 +5159,27 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             config.legend.axis = axes.numeric;
             config.legend.y = graphConfig.y;
             config.legend.contentWidth = this.get("width");
+            config.legend.contentHeight = graphConfig.height + axesConfig.date.height;
         } else {
             config.legend.x = graphConfig.x;
             config.legend.y = config.y;
             config.legend.width = graphConfig.width;
         }
         legend = this._addLegend(config, cb);
+        if(thresholdStyles && typeof previousClose === "number") {
+            thresholdConfig = {
+                type: "thresholdline",
+                thresholds: [previousClose],
+                graphic: graphic,
+                yAxis: axes.numeric,
+                xAxis: axes.date,
+                styles: {
+                    thresholds: thresholdStyles
+                }
+            };
+            thresholds = new Y.ThresholdLineSeries(thresholdConfig);
+            seriesCollection.push(thresholdConfig);
+        }
         chart = {
             axes: axes,
             graphic: graphic,
@@ -5052,7 +5196,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             graphX: graphConfig.x,
             graphY: graphConfig.y,
             legendConfig: config.legend,
-            seriesCollection: seriesCollection
+            seriesCollection: seriesCollection,
+            thresholds: thresholds
         };
         //repaint the gridlines and graph
         graphic._redraw();
