@@ -18,7 +18,7 @@ Y.extend(Y.StockIndicatorsCanvasAxisLegend, Y.StockIndicatorsAxisLegend, {
             labelStyles = styles.label,
             canvas  = DOCUMENT.createElement("canvas");
         canvas.width = this._contentWidth;
-        canvas.height = this.height;
+        canvas.height = this._contentHeight;
         canvas.style.left = "0px";
         canvas.style.top = "0px";
         canvas.style.position = "absolute";
@@ -207,7 +207,7 @@ Y.extend(Y.StockIndicatorsCanvasAxisLegend, Y.StockIndicatorsAxisLegend, {
             canvas = this._canvas,
             context = this._context;
         if(context) {
-            context.clearRect(0, 0, this._contentWidth, this.height);
+            context.clearRect(0, 0, this._contentWidth, this._contentHeight);
         }
         if(canvas) {
             Y.Event.purgeElement(canvas, true);
@@ -217,7 +217,7 @@ Y.extend(Y.StockIndicatorsCanvasAxisLegend, Y.StockIndicatorsAxisLegend, {
         canvas = this._interactiveCanvas;
         context = this._interactiveContext;
         if(context) {
-            context.clearRect(0, 0, this._contentWidth, this.height);
+            context.clearRect(0, 0, this._contentWidth, this._contentHeight);
         }
         if(canvas) {
             Y.Event.purgeElement(canvas, true);

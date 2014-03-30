@@ -276,6 +276,7 @@
          * @protected
          */
         destructor: function() {
+            var parentNode;
             if(this._path) {
                 if(this._context) {
                     this._context.clearRect(
@@ -285,7 +286,10 @@
                         this.get("height") + this._heightOffset
                     );
                 }
-                this._path.parentNode.removeChild(this._path);
+                parentNode = this._path.parentNode;
+                if(parentNode) {
+                    parentNode.removeChild(this._path);
+                }
             }
         }
     }), {

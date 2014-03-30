@@ -99,6 +99,7 @@ Y.StockIndicatorsPrinter.prototype = {
         legends = this._getLegends(legendConfigs);
         graphs = this._getGraphs(graphConfigs, graphDimensions);
         canvas = this._printItems(axes, gridlines, legends, graphs, canvas, context, len);
+        this._destroyItems(axes, gridlines, legends, graphs);
         return canvas;
     },
 
@@ -178,6 +179,66 @@ Y.StockIndicatorsPrinter.prototype = {
             }
         }
         return canvas;
+    },
+
+    /**
+     * Destroys items used in printing image.
+     *
+     * @method _destroyItems
+     * @param {Array} An array of objects container references to axis instances.
+     * @param {Array} An array of objects containing references to gridlines instances.
+     * @param {Array} An array of legend instances.
+     * @param {Array} An array of graph instances.
+     * @private
+     */
+    _destroyItems: function(axes, gridlines, legends, graphs) {
+        var i,
+            len = axes.length,
+            gridline,
+            horizontalGridlines,
+            verticalGridlines,
+            axis,
+            dateAxis,
+            numericAxis,
+            graph,
+            legend;
+        for(i = 0; i < len; i = i + 1) {
+            axis = axes[i];
+            numericAxis = axis.numeric;
+            dateAxis = axis.date;
+            if(numericAxis) {
+                numericAxis.destroy();
+            }
+            if(dateAxis) {
+                dateAxis.destroy();
+            }
+        }
+        len = gridlines.length;
+        for(i = 0; i < len; i = i + 1) {
+            gridline = gridlines[i];
+            horizontalGridlines = gridline.horizontal;
+            verticalGridlines = gridline.vertical;
+            if(horizontalGridlines) {
+                horizontalGridlines.remove();
+            }
+            if(verticalGridlines) {
+                verticalGridlines.remove();
+            }
+        }
+        len = graphs.length;
+        for(i = 0; i < len; i = i + 1) {
+            graph = graphs[i];
+            if(graph) {
+                graph.destroy();
+            }
+        }
+        len = legends.length;
+        for(i = 0; i < len; i = i + 1) {
+            legend = legends[i];
+            if(legend) {
+                legend.destroy();
+            }
+        }
     },
 
     /**

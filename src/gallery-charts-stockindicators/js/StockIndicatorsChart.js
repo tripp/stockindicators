@@ -1055,6 +1055,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             config.legend.axis = axes.numeric;
             config.legend.y = graphConfig.y;
             config.legend.contentWidth = this.get("width");
+            config.legend.contentHeight = graphConfig.height + axesConfig.date.height;
         } else {
             config.legend.x = graphConfig.x;
             config.legend.y = config.y;

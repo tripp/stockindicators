@@ -118,6 +118,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
         this.itemWidth = this.width;
         this.itemHeight = newStyles.height;
         this._contentWidth = cfg.contentWidth;
+        this._contentHeight = cfg.contentHeight;
         for(key in newStyles.arrow) {
             if(newStyles.arrow.hasOwnProperty(key)) {
                 this._styles.arrow[key] = newStyles.arrow[key];
