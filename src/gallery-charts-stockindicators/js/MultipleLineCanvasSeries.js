@@ -12,8 +12,8 @@
  * @extends CartesianSeries
  * @uses Lines
  * @uses ThresholdLines
- * @uses ThresholdCanvasLines
  * @uses MultipleLineSeries
+ * @uses ThresholdCanvasLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  * @submodule series-canvas-line-multiple
@@ -21,6 +21,6 @@
 Y.MultipleLineCanvasSeries = Y.Base.create("multipleLineCanvasSeries", Y.CartesianSeries, [
     Y.Lines,
     Y.ThresholdLines,
-    Y.ThresholdCanvasLines,
-    Y.MultipleLineSeries
+    Y.MultipleLineSeries,
+    Y.ThresholdCanvasLines
 ]);
