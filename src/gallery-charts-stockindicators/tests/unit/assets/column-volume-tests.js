@@ -2,11 +2,11 @@ YUI.add('column-volume-tests', function(Y) {
     var suite = new Y.Test.Suite("Charts: VolumeColumn"),
         parentDiv = Y.DOM.create('<div style="position:absolute;top:50px;left:0px;width:1000px;height:800px" id="testdiv"></div>'),
         DOC = Y.config.doc,
-        StockIndicatorChartTests;
+        VolumeColumnTests;
     DOC.body.appendChild(parentDiv),
 
-    StockIndicatorChartTests = new Y.Test.Case({
-        name: "StockIndicatorCharts Tests",
+    VolumeColumnTests = new Y.Test.Case({
+        name: "StockIndicators VolumeColumn Tests",
        
         setUp: function() {
             this.volumeColumn = new Y.VolumeColumn();
@@ -132,10 +132,68 @@ YUI.add('column-volume-tests', function(Y) {
                 );
                 previousClose = dataProvider[i].close;
             }
+        },
+
+        "test: _getDefaultStyles()" : function() {
+            var upPath = {
+                    shapeRendering: "crispEdges",
+                    fill: {
+                        color: "#00aa00",
+                        alpha: 1
+                    },
+                    stroke: {
+                        color: "#000000",
+                        alpha: 1,
+                        weight: 0
+                    }
+                },
+                downPath = {
+                    shapeRendering: "crispEdges",
+                    fill: {
+                        color: "#aa0000",
+                        alpha: 1
+                    },
+                    stroke: {
+                        color: "#000000",
+                        alpha: 1,
+                        weight: 0
+                    }
+                },
+                styles = this.volumeColumn._getDefaultStyles(),
+                key,
+                compareStyles = function(test, actual) {
+                    var key;
+                    for(key in test) {
+                        if(test.hasOwnProperty(key)) {
+                            Y.Assert.areEqual(test[key], actual[key], "The " + key + " property should equal " + test[key] + ".");   
+                        }
+                    }
+                };
+            Y.Assert.isInstanceOf(Object, styles.upPath, "The upPath property should be an object.");
+            Y.Assert.isInstanceOf(Object, styles.upPath.fill, "The upPath.fill property should be an object.");
+            Y.Assert.isInstanceOf(Object, styles.upPath.stroke, "The upPath.stroke property should be an object.");
+            Y.Assert.areEqual(
+                upPath.shapeRendering,
+                styles.upPath.shapeRendering,
+                "The upPath.shapeRendering property should equal " + upPath.shapeRendering + "."
+            );
+            compareStyles(upPath.fill, styles.upPath.fill);
+            compareStyles(upPath.stroke, styles.upPath.stroke);
+            
+            Y.Assert.isInstanceOf(Object, styles.downPath, "The downPath property should be an object.");
+            Y.Assert.isInstanceOf(Object, styles.downPath.fill, "The downPath.fill property should be an object.");
+            Y.Assert.isInstanceOf(Object, styles.downPath.stroke, "The downPath.stroke property should be an object.");
+            Y.Assert.areEqual(
+                downPath.shapeRendering,
+                styles.downPath.shapeRendering,
+                "The downPath.shapeRendering property should equal " + downPath.shapeRendering + "."
+            );
+            compareStyles(downPath.fill, styles.downPath.fill);
+            compareStyles(downPath.stroke, styles.downPath.stroke);
         }
     });
 
-    suite.add(StockIndicatorChartTests);
+    suite.add(VolumeColumnTests);
 
     Y.Test.Runner.add(suite);
 }, '@VERSION@' ,{requires:['gallery-charts-stockindicators']});
