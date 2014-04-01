@@ -231,17 +231,8 @@ Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
                     this.set("rendered", true);
                 }
 
-                if(node) {
-                    if(node instanceof Y.Graphic) {
-                        this.set("x", node.get("x"));
-                        this.set("y", node.get("y"));
-                        this.set("width", node.get("width"));
-                        this.set("height", node.get("height"));
-                        node = node.get("node");
-                        node = node ? node.parentNode : null;
-                    } else if(node._node) {
-                        node = node._node;
-                    }
+                if(node && node._node) {
+                    node = node._node;
                 }
                 this.set("upPath", this._getPath(node));
                 this.set("downPath", this._getPath(node));
