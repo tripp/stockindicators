@@ -1,3 +1,8 @@
+/**
+ * Provides functionality for a chart.
+ *
+ * @module gallery-charts-stockindicators
+ */
     var WINDOW = Y.config.win,
         DOCUMENT = Y.config.doc;
     Y.Axis.prototype.getLabel = function(styles)

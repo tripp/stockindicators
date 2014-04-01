@@ -1,8 +1,7 @@
 /**
  * Provides functionality for creating threshold lines.
  *
- * @module charts
- * @submodule series-threshold-canvas-line-util
+ * @module gallery-charts-stockindicators
  */
 /**
  * The ThresholdCanvasLines class contains methods for drawing lines relative to a y-coordinate on a cartesian
@@ -12,7 +11,6 @@
  * @extends Lines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
- * @submodule series-threshold-canvas-line-util
  */
 Y.ThresholdCanvasLines = function() {
     Y.ThresholdCanvasLines.superclass.constructor.apply(this, arguments);

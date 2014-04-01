@@ -1,10 +1,4 @@
 /**
- * Allows for the creation of a visualization based on financial
- * indicators..
- *
- * @module gallery-charts-stockindicators
- */
-/**
  * Provides functionality for a crosshair.
  *
  * @module gallery-charts-stockindicators

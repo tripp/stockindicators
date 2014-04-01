@@ -1,8 +1,7 @@
 /**
  * Provides functionality for creating threshold lines.
  *
- * @module charts
- * @submodule series-threshold-line
+ * @module gallery-charts-stockindicators
  */
 /**
  * The ThresholdLineSeries class renders lines corresponding to values across a y-axis.
@@ -12,7 +11,6 @@
  * @uses ThresholdLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
- * @submodule series-threshold-line
  */
 Y.ThresholdLineSeries = Y.Base.create("thresholdLineSeries", Y.SeriesBase, [Y.Lines, Y.ThresholdLines],  {
     /**

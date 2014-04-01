@@ -1,3 +1,11 @@
+/**
+ * Draws a volume based column chart.
+ *
+ * @module gallery-charts-stockindicators
+ * @class VolumeColumn
+ * @extends RangeSeries
+ * @constructor
+ */
 Y.VolumeColumn = function() {
     Y.VolumeColumn.superclass.constructor.apply(this, arguments);
 };

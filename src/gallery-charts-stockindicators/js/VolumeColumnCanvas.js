@@ -1,3 +1,11 @@
+/**
+ * Canvas implementation of a volume based column chart.
+ *
+ * @module gallery-charts-stockindicators
+ * @class VolumeColumnCanvas
+ * @extends VolumeColumn
+ * @constructor
+ */
 Y.VolumeColumnCanvas = function() {
     this._paths = [];
     Y.VolumeColumnCanvas.superclass.constructor.apply(this, arguments);

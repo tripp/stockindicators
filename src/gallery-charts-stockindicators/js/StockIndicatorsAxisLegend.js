@@ -1,3 +1,15 @@
+/**
+ * Provides functionality for a legend.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * Displays a legend for a corresponding chart
+ * application.
+ *
+ * @class StockIndicatorsAxisLegend
+ * @constructor
+ */
 Y.StockIndicatorsAxisLegend = function() {
     this.initializer.apply(this,arguments);
 };

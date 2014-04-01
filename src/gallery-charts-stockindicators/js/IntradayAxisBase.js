@@ -1,3 +1,11 @@
+/**
+ * Provides logic for an intraday axis.
+ *
+ * @module gallery-charts-stockindicators
+ * @class IntradayAxisBase
+ * @extends CategoryAxisBase
+ * @constructor
+ */
 Y.IntradayAxisBase = function() {
     Y.IntradayAxisBase.superclass.constructor.apply(this, arguments);
 };

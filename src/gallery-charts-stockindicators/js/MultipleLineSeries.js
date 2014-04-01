@@ -1,8 +1,7 @@
 /**
  * Provides functionality for creating a line series with alternating colors based on thresholds.
  *
- * @module charts
- * @submodule series-line-multiple
+ * @module gallery-charts-stockindicators
  */
 /**
  * The MultipleLineSeries class renders quantitative data on a graph by connecting relevant data points and
@@ -14,7 +13,6 @@
  * @uses ThresholdLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
- * @submodule series-line-multiple
  */
 Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y.Lines, Y.ThresholdLines],  {
     /**
