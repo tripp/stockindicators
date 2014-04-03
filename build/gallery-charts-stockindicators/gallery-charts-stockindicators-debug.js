@@ -6,7 +6,9 @@ YUI.add('gallery-charts-stockindicators', function (Y, NAME) {
  * @module gallery-charts-stockindicators
  */
     var WINDOW = Y.config.win,
-        DOCUMENT = Y.config.doc;
+        DOCUMENT = Y.config.doc,
+        Y_Color = Y.Color,
+        TOHEX = Y_Color.toHex;
     Y.Axis.prototype.getLabel = function(styles)
     {
         var i,
@@ -910,21 +912,998 @@ Y.extend(Y.VolumeColumn, Y.RangeSeries, {
     }
 });
 /**
+ * Provides common functionality for canvas graphs.
+ *
+ * @module gallery-charts-stockindicators
+ * @class CanvasSeriesImpl
+ * @constructor
+ */
+Y.CanvasSeriesImpl = function() {};
+Y.CanvasSeriesImpl.ATTRS = {
+    /**
+     * Indicates the x position of gridlines.
+     *
+     * @attribute x
+     * @type Number
+     */
+    x: {},
+
+    /**
+     * Indicates the y position of gridlines.
+     *
+     * @attribute y
+     * @type Number
+     */
+    y: {},
+
+    /*
+     * Width of the instance
+     *
+     * @attribute width
+     * @type Number
+     */
+    width: {
+        lazyAdd: false,
+
+        getter: function() {
+            return this._width;
+        },
+
+        setter: function(val) {
+            this._width = val;
+            return val;
+        }
+
+    },
+
+    /*
+     * Height of the instance
+     *
+     * @attribute height
+     * @type Number
+     */
+    height: {
+        lazyAdd: false,
+
+        getter: function() {
+            return this._height;
+        },
+
+        setter: function(val) {
+            this._height = val;
+            return val;
+        }
+    },
+
+    /**
+     * The graphic in which drawings will be rendered.
+     *
+     * @attribute graphic
+     * @type HTMLElement
+     */
+    graphic: {
+        lazyAdd: false,
+
+        setter: function(val) {
+            var node = val,
+                pathAttrs = this._getPathAttrs(),
+                i,
+                len;
+            //woraround for Attribute order of operations bug
+            if(!this.get("rendered")) {
+                this.set("rendered", true);
+            }
+
+            if(node && node._node) {
+                node = node._node;
+            }
+
+            if(pathAttrs) {
+                len = pathAttrs.length;
+                for(i = 0; i < len; i = i + 1) {
+                    this.set(pathAttrs[i], this._getPath(node));
+                }
+            }
+            return val;
+        }
+    }
+};
+Y.CanvasSeriesImpl.prototype = {
+    /**
+     * Creates an object container a reference to a canvas instance and its
+     * 2d context.
+     *
+     * @param {Object} This can be a graphic instance Node instance or HTMLElement.
+     * @return Object
+     * @private
+     */
+    _getPath: function(node) {
+        var canvas = DOCUMENT.createElement("canvas"),
+            context = canvas.getContext("2d"),
+            path,
+            paths = this._paths || [];
+        if(node) {
+            node.appendChild(canvas);
+        }
+        canvas.style.position = "absolute";
+        path =  {
+            canvas: canvas,
+            context: context
+        };
+        paths.push(path);
+        this._paths = paths;
+        return path;
+    },
+
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return null;
+    },
+
+    /**
+     * Clears path instances.
+     *
+     * @method _clearPaths
+     * @param {Path|Array} path A path element or an array of path elements.
+     * @private
+     */
+    _clearPaths: function(path) {
+        var i,
+            len,
+            width = this.get("width"),
+            height = this.get("height");
+        if(Y.Lang.isArray(path)) {
+            len = path.length;
+            for(i = 0; i < len; i = i + 1) {
+                path[i].context.clearRect(0, 0, width, height);
+            }
+        } else {
+            path.context.clearRect(0, 0, width, height);
+        }
+    },
+
+    /**
+     * Toggles visibility
+     *
+     * @method _toggleVisible
+     * @param {Boolean} visible indicates visibility
+     * @private
+     */
+    _toggleVisible: function(visible)
+    {
+        var visibility = visible ? "visible" : "hidden",
+            paths = this._paths,
+            path,
+            i,
+            len;
+         if(paths) {
+            len = paths.length;
+            for(i = 0; i < len; i = i + 1) {
+                path = this._paths[i];
+                path.canvas.style.visibility = visibility;
+            }
+         }
+    },
+
+    /**
+     * Parses hex color string and alpha value to rgba
+     *
+     * @method _toRGBA
+     * @param {Object} val Color value to parse. Can be hex string, rgb or name.
+     * @param {Number} alpha Numeric value between 0 and 1 representing the alpha level.
+     * @private
+     */
+    _toRGBA: function(val, alpha) {
+        alpha = (alpha !== undefined) ? alpha : 1;
+        if (!Y_Color.re_RGB.test(val)) {
+            val = TOHEX(val);
+        }
+
+        if(Y_Color.re_hex.exec(val)) {
+            val = 'rgba(' + [
+                parseInt(RegExp.$1, 16),
+                parseInt(RegExp.$2, 16),
+                parseInt(RegExp.$3, 16)
+            ].join(',') + ',' + alpha + ')';
+        }
+        return val;
+    },
+
+   /**
+    * Draws a rectangle.
+    *
+    * @method _drawRect
+    * @param {Context} context Reference to the context in which to draw the rectangle.
+    * @param {Number} x The x-coordinate in which to start the drawing.
+    * @param {Number} y The y-coordinate in which to start the drawing.
+    * @param {Number} width The width of the rectangle.
+    * @param {Number} height The height of the rectangle.
+    * return Context
+    * @private
+    */
+    _drawRect: function(context, x, y, width, height) {
+        context.moveTo(x, y);
+        context.lineTo(x + width, y);
+        context.lineTo(x + width, y + height);
+        context.lineTo(x, y + height);
+        context.lineTo(x, y);
+        return context;
+    },
+
+    /**
+     * Destructor implementation for canvas implementations of graphs.
+     *
+     * @method destructor
+     * @protected
+     */
+    destructor: function() {
+        var path,
+            context,
+            canvas,
+            paths = this._paths,
+            pathAttrs = this._getPathAttrs(),
+            i,
+            len,
+            width = this.get("width"),
+            height = this.get("height"),
+            parentNode;
+        if(paths) {
+            len = paths.length;
+            for(i = 0; i < len; i = i + 1) {
+                path = paths[i];
+                context = path.context;
+                if(context) {
+                    context.clearRect(0, 0, width, height);
+                }
+                canvas = path.canvas;
+                if(canvas) {
+                    parentNode = canvas.parentNode;
+                    Y.Event.purgeElement(canvas, true);
+                    if(parentNode) {
+                        parentNode.removeChild(canvas);
+                    }
+                }
+            }
+        }
+        if(pathAttrs) {
+            len = pathAttrs.length;
+            for(i = 0; i < len; i = i + 1) {
+                this.set(pathAttrs[i], null);
+            }
+        }
+    }
+};
+/**
+ * Provides functionality for drawing lines in a series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * Utility class used for drawing lines.
+ *
+ * @class CanvasLines
+ * @extends Lines
+ * @constructor
+ */
+Y.CanvasLines = function() {};
+Y.extend(Y.CanvasLines, Y.Lines, {
+    /*
+     * Draws lines for the series.
+     *
+     * @method drawLines
+     * @protected
+     */
+    drawLines: function()
+    {
+        if(this.get("xcoords").length < 1)
+        {
+            return;
+        }
+        var isNumber = Y.Lang.isNumber,
+            xcoords,
+            ycoords,
+            direction = this.get("direction"),
+            len,
+            lastPointValid,
+            pointValid,
+            noPointsRendered = true,
+            lastValidX,
+            lastValidY,
+            nextX,
+            nextY,
+            i,
+            styles = this.get("styles").line,
+            lineType = styles.lineType,
+            lc = styles.color || this._getDefaultColor(this.get("graphOrder"), "line"),
+            lineAlpha = styles.alpha,
+            dashLength = styles.dashLength,
+            gapSpace = styles.gapSpace,
+            connectDiscontinuousPoints = styles.connectDiscontinuousPoints,
+            discontinuousType = styles.discontinuousType,
+            discontinuousDashLength = styles.discontinuousDashLength,
+            discontinuousGapSpace = styles.discontinuousGapSpace,
+            path = this.get("linePath"),
+            context = path.context,
+            width = this.get("width"),
+            height = this.get("height");
+        path.canvas.width = width;
+        path.canvas.height = height;
+        if(this._stacked)
+        {
+            xcoords = this.get("stackedXCoords");
+            ycoords = this.get("stackedYCoords");
+        }
+        else
+        {
+            xcoords = this.get("xcoords");
+            ycoords = this.get("ycoords");
+        }
+        len = direction === "vertical" ? ycoords.length : xcoords.length;
+        this._clearPaths(path);
+        context.strokeStyle = isNumber(lineAlpha) ? this._toRGBA(lc, lineAlpha) : lc;
+        context.lineWidth = styles.weight;
+        for(i = 0; i < len; i = ++i)
+        {
+            nextX = xcoords[i];
+            nextY = ycoords[i];
+            pointValid = isNumber(nextX) && isNumber(nextY);
+            if(!pointValid)
+            {
+                lastPointValid = pointValid;
+                continue;
+            }
+            if(noPointsRendered)
+            {
+                noPointsRendered = false;
+                context.moveTo(nextX, nextY);
+            }
+            else if(lastPointValid)
+            {
+                if(lineType !== "dashed")
+                {
+                    context.lineTo(nextX, nextY);
+                }
+                else
+                {
+                    this.drawDashedLine(path, lastValidX, lastValidY, nextX, nextY,
+                                                dashLength,
+                                                gapSpace);
+                }
+            }
+            else if(!connectDiscontinuousPoints)
+            {
+                context.moveTo(nextX, nextY);
+            }
+            else
+            {
+                if(discontinuousType !== "solid")
+                {
+                    this.drawDashedLine(path, lastValidX, lastValidY, nextX, nextY,
+                                                discontinuousDashLength,
+                                                discontinuousGapSpace);
+                }
+                else
+                {
+                    context.lineTo(nextX, nextY);
+                }
+            }
+            lastValidX = nextX;
+            lastValidY = nextY;
+            lastPointValid = true;
+        }
+        context.stroke();
+    },
+
+    /**
+     * Draws a dashed line between two points.
+     *
+     * @method drawDashedLine
+     * @param {Object} path Reference to the object in which the line will be drawn.
+     * @param {Number} xStart	The x position of the start of the line
+     * @param {Number} yStart	The y position of the start of the line
+     * @param {Number} xEnd		The x position of the end of the line
+     * @param {Number} yEnd		The y position of the end of the line
+     * @param {Number} dashSize	the size of dashes, in pixels
+     * @param {Number} gapSize	the size of gaps between dashes, in pixels
+     * @private
+     */
+    drawDashedLine: function(path, xStart, yStart, xEnd, yEnd, dashSize, gapSize) {
+        var context = path.context;
+        Y.CanvasLines.superclass.drawDashedLine.apply(this, [
+            context,
+            xStart,
+            yStart,
+            xEnd,
+            yEnd,
+            dashSize,
+            gapSize
+        ]);
+    },
+
+    /**
+     * Executes moveTo.
+     *
+     * @method _moveTo
+     * @param {Object} Object containing a reference to the canvas and context.
+     * @param {Number} x The x coordinate.
+     * @param {Number} y The y coordinate.
+     * @private
+     */
+    _moveTo: function(path, x, y) {
+        path.context.moveTo(x, y);
+    },
+
+    /**
+     * Draws a line.
+     *
+     * @method _lineTo
+     * @param {Object} Object containing a reference to the canvas and context.
+     * @param {Number} x The x coordinate.
+     * @param {Number} y The y coordinate.
+     * @private
+     */
+    _lineTo: function(path, x, y) {
+        path.context.lineTo(x, y);
+    },
+
+    /**
+     * Closes path instances.
+     *
+     * @method _endPaths
+     * @param {Path|Array} path A path element or an array of path elements.
+     * @private
+     */
+    _endPaths: function(path) {
+        var i,
+            len;
+        if(Y.Lang.isArray(path)) {
+            len = path.length;
+            for(i = 0; i < len; i = i + 1) {
+                path[i].context.lineWidth = path[i].lineWidth;
+                path[i].context.strokeStyle = path[i].strokeStyle;
+                path[i].context.stroke();
+            }
+        } else {
+            path.context.lineWidth = path.lineWidth;
+            path.context.strokeStyle = path.strokeStyle;
+            path.context.stroke();
+        }
+    }
+});
+/**
+ * Provides functionality for creating a line series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * The CanvasLinesSeries class renders quantitative data on a graph by connecting relevant data points.
+ *
+ * @class CanvasLinesSeries
+ * @extends LineSeries
+ * @uses CanvasSeriesImpl
+ * @uses CanvasLines
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.CanvasLineSeries = Y.Base.create("lineSeries", Y.LineSeries, [Y.CanvasSeriesImpl, Y.CanvasLines], {
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return ["linePath"];
+    }
+}, {
+    ATTRS: {
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @default canvasLine
+         */
+        type: "canvasLine"
+    }
+});
+/**
+ * Provides functionality for drawing fills in a series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * Utility class used for drawing area fills.
+ *
+ * @class CanvasFills
+ * @extends Fills
+ * @constructor
+ */
+Y.CanvasFills = function() {};
+Y.extend(Y.CanvasFills, Y.Fills, {
+    /**
+     * Draws fill
+     *
+     * @method drawFill
+     * @param {Array} xcoords The x-coordinates for the series.
+     * @param {Array} ycoords The y-coordinates for the series.
+     * @protected
+     */
+    drawFill: function(xcoords, ycoords)
+    {
+        if(xcoords.length < 1)
+        {
+            return;
+        }
+        var isNumber = Y.Lang.isNumber,
+            len = xcoords.length,
+            firstX = xcoords[0],
+            firstY = ycoords[0],
+            lastValidX = firstX,
+            lastValidY = firstY,
+            nextX,
+            nextY,
+            pointValid,
+            noPointsRendered = true,
+            i = 0,
+            styles = this.get("styles").area,
+            path = this.get("areaPath"),
+            color = styles.color || this._getDefaultColor(this.get("graphOrder"), "slice"),
+            alpha = styles.alpha,
+            context = path.context,
+            width = this.get("width"),
+            height = this.get("height");
+        path.canvas.width = width;
+        path.canvas.height = height;
+        this._clearPaths(path);
+        context.fillStyle = isNumber(alpha) ? this._toRGBA(color, alpha) : color;
+        context.beginPath();
+        for(; i < len; i = ++i)
+        {
+            nextX = xcoords[i];
+            nextY = ycoords[i];
+            pointValid = isNumber(nextX) && isNumber(nextY);
+            if(!pointValid)
+            {
+                continue;
+            }
+            if(noPointsRendered)
+            {
+                this._firstValidX = nextX;
+                this._firstValidY = nextY;
+                noPointsRendered = false;
+                context.moveTo(nextX, nextY);
+            }
+            else
+            {
+                context.lineTo(nextX, nextY);
+            }
+            lastValidX = nextX;
+            lastValidY = nextY;
+        }
+        this._lastValidX = lastValidX;
+        this._lastValidY = lastValidY;
+        context.closePath();
+        context.fill();
+    }
+});
+/**
+ * Provides functionality for creating a line series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * The AreaSeries class renders quantitative data on a graph by creating a fill between 0
+ * and the relevant data points.
+ *
+ * @class CanvasAreasSeries
+ * @extends AreaSeries
+ * @uses Fills
+ * @uses CanvasSeriesImpl
+ * @uses CanvasFills
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.CanvasAreaSeries = Y.Base.create("areaSeries", Y.AreaSeries, [Y.Fills, Y.CanvasSeriesImpl, Y.CanvasFills], {
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return ["areaPath"];
+    }
+}, {
+    ATTRS: {
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @default canvasArea
+         */
+        type: "canvasArea"
+    }
+});
+/**
+ * Provides functionality for creating a line series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * The CanvasComboSeries class renders a combination of lines, plots and area fills in a single series.
+ * Each series type has a corresponding boolean attribute indicating if it is rendered. By default,
+ * lines and plots are rendered and area is not.
+ *
+ * @class CanvasCombosSeries
+ * @extends ComboSeries
+ * @uses Fills
+ * @uses CanvasSeriesImpl
+ * @uses CanvasLines
+ * @uses CanvasFills
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.CanvasComboSeries = Y.Base.create("canvasComboSeries", Y.ComboSeries, [Y.Fills, Y.CanvasSeriesImpl, Y.CanvasLines, Y.CanvasFills], {
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return ["linePath", "areaPath"];
+    }
+}, {
+    /**
+     * Read-only attribute indicating the type of series.
+     *
+     * @attribute type
+     * @type String
+     * @default canvasCombo
+     */
+    ATTRS: {
+        type: "canvasCombo"
+    },
+
+    /**
+     * Indicates whether a fill is displayed.
+     *
+     * @attribute showAreaFill
+     * @type Boolean
+     * @default false
+     */
+    showAreaFill: {
+        value: false
+    },
+
+    /**
+     * Indicates whether lines are displayed.
+     *
+     * @attribute showLines
+     * @type Boolean
+     * @default true
+     */
+    showLines: {
+        value: true
+    },
+
+    /**
+     * Indicates whether markers are displayed.
+     *
+     * @attribute showMarkers
+     * @type Boolean
+     * @default true
+     */
+    showMarkers: {
+        value: true
+    }
+});
+/**
+ * Provides functionality for creating a canvas implementation of a Candlestick series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * The CanvasCandlestickSeries class renders columns (candles) and lines (wicks) representing the open, high, low and close
+ * values for a chart.
+ *
+ * @class CanvasCandlestickSeries
+ * @extends CandlestickSeries
+ * @uses CanvasSeriesImpl
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.CanvasCandlestickSeries = Y.Base.create("canvasCandlestickSeries", Y.CandlestickSeries, [Y.CanvasSeriesImpl], {
+    /**
+     * Draws markers for an Candlestick series.
+     *
+     * @method
+     * @param {Array} xcoords The xcoordinates to be plotted.
+     * @param {Array} opencoords The coordinates representing the open values.
+     * @param {Array} highcoords The coordinates representing the high values.
+     * @param {Array} lowcoords The coordinates representing the low values.
+     * @param {Array} closecoords The coordinates representing the close values.
+     * @param {Number} len The number of x coordinates to plot.
+     * @param {Number} width The width of each candlestick marker.
+     * @param {Number} halfwidth Half the width of each candlestick marker.
+     * @param {Object} styles The styles for the series.
+     * @private
+     */
+    _drawMarkers: function(xcoords, opencoords, highcoords, lowcoords, closecoords, len, width, halfwidth, styles)
+    {
+        var upcandle = this.get("upcandle"),
+            downcandle = this.get("downcandle"),
+            candle,
+            wick = this.get("wick"),
+            wickStyles = styles.wick,
+            wickWidth = wickStyles.width,
+            hasUpCandle = false,
+            hasDownCandle = false,
+            hasWick = false,
+            cx,
+            opencoord,
+            highcoord,
+            lowcoord,
+            closecoord,
+            left,
+            right,
+            top,
+            bottom,
+            height,
+            leftPadding = styles.padding.left,
+            up,
+            i,
+            isNumber = Y.Lang.isNumber,
+            canvasWidth = this.get("width"),
+            canvasHeight = this.get("height"),
+            x = this.get("x"),
+            y = this.get("y");
+        upcandle.canvas.style.left = x + "px";
+        upcandle.canvas.style.top = y + "px";
+        downcandle.canvas.style.left = x + "px";
+        downcandle.canvas.style.top = y + "px";
+        wick.canvas.style.left = x + "px";
+        wick.canvas.style.top = y + "px";
+
+        upcandle.canvas.width = canvasWidth;
+        upcandle.canvas.height = canvasHeight;
+        downcandle.canvas.width = canvasWidth;
+        downcandle.canvas.height = canvasHeight;
+        wick.canvas.width = canvasWidth;
+        wick.canvas.height = canvasHeight;
+
+        upcandle.context.fillStyle = styles.upcandle.fill.color;
+        downcandle.context.fillStyle = styles.downcandle.fill.color;
+        upcandle.context.strokeStyle = styles.upcandle.stroke.color;
+        downcandle.context.strokeStyle = styles.downcandle.stroke.color;
+        upcandle.context.lineWidth = styles.upcandle.stroke.weight;
+        downcandle.context.lineWidth = styles.downcandle.stroke.weight;
+        wick.context.fillStyle = styles.wick.fill.color;
+        wick.context.lineWidth = styles.wick.stroke.weight;
+
+        upcandle.context.clearRect(0, 0, canvasWidth, canvasHeight);
+        downcandle.context.clearRect(0, 0, canvasWidth, canvasHeight);
+        wick.context.clearRect(0, 0, canvasWidth, canvasHeight);
+
+        for(i = 0; i < len; i = i + 1)
+        {
+            cx = Math.round(xcoords[i] + leftPadding);
+            left = cx - halfwidth;
+            right = cx + halfwidth;
+            opencoord = Math.round(opencoords[i]);
+            highcoord = Math.round(highcoords[i]);
+            lowcoord = Math.round(lowcoords[i]);
+            closecoord = Math.round(closecoords[i]);
+            up = opencoord > closecoord;
+            if(up) {
+                top = closecoord;
+                bottom = opencoord;
+                candle = upcandle;
+                hasUpCandle = true;
+            } else {
+                top = opencoord;
+                bottom = closecoord;
+                candle = downcandle;
+                hasDownCandle = true;
+            }
+            height = bottom - top;
+            if(candle && isNumber(left) && isNumber(top) && isNumber(width) && isNumber(height))
+            {
+                candle.context = this._drawRect(candle.context, left, top, width, height);
+            }
+            if(isNumber(cx) && isNumber(highcoord) && isNumber(lowcoord))
+            {
+                hasWick = true;
+                wick.context = this._drawRect(wick.context, cx - wickWidth/2, highcoord, wickWidth, lowcoord - highcoord);
+            }
+        }
+        if(hasUpCandle) {
+            upcandle.context.closePath();
+            upcandle.context.fill();
+        }
+        if(hasDownCandle) {
+            downcandle.context.closePath();
+            downcandle.context.fill();
+        }
+        if(hasWick) {
+            wick.context.closePath();
+            wick.context.fill();
+        }
+    },
+
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return ["wick", "upcandle", "downcandle"];
+    }
+}, {
+    ATTRS: {
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @readOnly
+         * @default canvasCandlestick
+         */
+        type: {
+            value: "canvasCandlestick"
+        }
+    }
+});
+
+/**
+ * Provides functionality for creating a canvasOHLC series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * The CanvasOHLCSeries class renders lines representing the open, high, low and close
+ * values for a chart.
+ *
+ * @class CanvasOHLCSeries
+ * @extends OHLCSeries
+ * @uses CanvasSeriesImpl
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.CanvasOHLCSeries = Y.Base.create("canvasOHLCSeries", Y.OHLCSeries, [Y.CanvasSeriesImpl], {
+    /**
+     * Draws markers for an OHLC series.
+     *
+     * @method
+     * @param {Array} xcoords The xcoordinates to be plotted.
+     * @param {Array} opencoords The coordinates representing the open values.
+     * @param {Array} highcoords The coordinates representing the high values.
+     * @param {Array} lowcoords The coordinates representing the low values.
+     * @param {Array} closecoords The coordinates representing the close values.
+     * @param {Number} len The number of x coordinates to plot.
+     * @param {Number} width The width of each ohlc marker.
+     * @param {Number} halfwidth Half the width of each ohlc marker.
+     * @param {Object} styles The styles for the series.
+     * @private
+     */
+    _drawMarkers: function(xcoords, opencoords, highcoords, lowcoords, closecoords, len, width, halfwidth, styles)
+    {
+        var upmarker = this.get("upmarker"),
+            downmarker = this.get("downmarker"),
+            opencoord,
+            highcoord,
+            lowcoord,
+            closecoord,
+            left,
+            right,
+            leftPadding = styles.padding.left,
+            context,
+            up,
+            cx,
+            i,
+            height,
+            canvasWidth = this.get("width"),
+            canvasHeight = this.get("height"),
+            upContext = upmarker.context,
+            downContext = downmarker.context,
+            upStyles = styles.upmarker.stroke,
+            downStyles = styles.downmarker.stroke,
+            upColor = upStyles.color,
+            upAlpha = upStyles.alpha,
+            downColor = downStyles.color,
+            downAlpha = downStyles.alpha;
+
+        upmarker.canvas.width = canvasWidth;
+        upmarker.canvas.height = canvasHeight;
+        downmarker.canvas.width = canvasWidth;
+        downmarker.canvas.height = canvasHeight;
+
+        this._clearPaths(upmarker);
+        this._clearPaths(downmarker);
+
+        upContext.lineWidth = upStyles.weight;
+        upContext.strokeStyle = Y.Lang.isNumber(upAlpha) ? this._toRGBA(upColor, upAlpha) : upColor;
+        downContext.lineWidth = downStyles.weight;
+        downContext.strokeStyle = Y.Lang.isNumber(downAlpha) ? this._toRGBA(downColor, downAlpha) : downColor;
+        for(i = 0; i < len; i = i + 1)
+        {
+            cx = xcoords[i] + leftPadding;
+            left = cx - halfwidth;
+            right = cx + halfwidth;
+            opencoord = opencoords[i];
+            highcoord = highcoords[i];
+            lowcoord = lowcoords[i];
+            closecoord = closecoords[i];
+            up = opencoord > closecoord;
+            height = lowcoord - highcoord;
+            context = up ? upContext : downContext;
+            context.moveTo(left, opencoord);
+            context.lineTo(cx, opencoord);
+            context.moveTo(cx, highcoord);
+            context.lineTo(cx, lowcoord);
+            context.moveTo(cx, closecoord);
+            context.lineTo(right, closecoord);
+        }
+
+        upContext.stroke();
+        downContext.stroke();
+    },
+
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return ["upmarker", "downmarker"];
+    }
+}, {
+    ATTRS: {
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @readOnly
+         * @default canvasOHLC
+         */
+        type: {
+            value: "canvasOHLC"
+        }
+    }
+});
+
+/**
  * Canvas implementation of a volume based column chart.
  *
  * @module gallery-charts-stockindicators
  * @class VolumeColumnCanvas
  * @extends VolumeColumn
+ * @uses CanvasSeriesImpl
  * @constructor
  */
-Y.VolumeColumnCanvas = function() {
-    this._paths = [];
-    Y.VolumeColumnCanvas.superclass.constructor.apply(this, arguments);
-};
-
-Y.VolumeColumnCanvas.NAME = "volumeColumnCanvas";
-
-Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
+Y.VolumeColumnCanvas = Y.Base.create("volumeColumnCanvas", Y.VolumeColumn, [Y.CanvasSeriesImpl],  {
     drawSeries: function() {
         var valueData = this.get("yAxis").get("dataProvider"),
             xcoords = this.get("xcoords"),
@@ -1021,65 +2000,15 @@ Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
     },
 
     /**
-     * Toggles visibility
+     * Returns a the name of the attributes that reference path
+     * objects.
      *
-     * @method _toggleVisible
-     * @param {Boolean} visible indicates visibility
+     * @method _getPathAttrs
+     * @return Array
      * @private
      */
-    _toggleVisible: function(visible)
-    {
-        var visibility = visible ? "visible" : "hidden";
-        this.get("upPath").canvas.style.visibility = visibility;
-        this.get("downPath").canvas.style.visibility = visibility;
-    },
-
-    /**
-     * Creates an object container a reference to a canvas instance and its
-     * 2d context.
-     *
-     * @param {Object} This can be a graphic instance Node instance or HTMLElement.
-     * @return Object
-     * @private
-     */
-    _getPath: function(node) {
-        var canvas = DOCUMENT.createElement("canvas"),
-            context = canvas.getContext("2d"),
-            path;
-        if(node) {
-            node.appendChild(canvas);
-        }
-        canvas.style.position = "absolute";
-        path =  {
-            canvas: canvas,
-            context: context
-        };
-        this._paths.push(path);
-        return path;
-    },
-
-    /**
-     * Destructor implementation for the VolumeColumnCanvas class.
-     *
-     * @method destructor
-     * @protected
-     */
-    destructor: function() {
-        var upPath = this.get("upPath"),
-            downPath = this.get("downPath"),
-            width = this.get("width"),
-            height = this.get("height"),
-            parentNode;
-        upPath.context.clearRect(0, 0, width, height);
-        downPath.context.clearRect(0, 0, width, height);
-        parentNode = upPath.canvas.parentNode;
-        if(parentNode) {
-            parentNode.removeChild(upPath.canvas);
-        }
-        parentNode = downPath.canvas.parentNode;
-        if(parentNode) {
-            parentNode.removeChild(downPath.canvas);
-        }
+    _getPathAttrs: function() {
+        return ["upPath", "downPath"];
     }
 }, {
     ATTRS: {
@@ -1093,62 +2022,6 @@ Y.extend(Y.VolumeColumnCanvas, Y.VolumeColumn, {
          */
         type: {
             value: "volumeColumnCanvas"
-        },
-
-        x: {},
-
-        y: {},
-
-        width: {
-            lazyAdd: false,
-
-            getter: function() {
-                return this._width;
-            },
-
-            setter: function(val) {
-                this._width = val;
-                return val;
-            }
-
-        },
-
-        height: {
-            lazyAdd: false,
-
-            getter: function() {
-                return this._height;
-            },
-
-            setter: function(val) {
-                this._height = val;
-                return val;
-            }
-        },
-
-        /**
-         * The graphic in which drawings will be rendered.
-         *
-         * @attribute graphic
-         * @type Graphic
-         */
-        graphic: {
-            lazyAdd: false,
-
-            setter: function(val) {
-                var node = val;
-                //woraround for Attribute order of operations bug
-                if(!this.get("rendered")) {
-                    this.set("rendered", true);
-                }
-
-                if(node && node._node) {
-                    node = node._node;
-                }
-                this.set("upPath", this._getPath(node));
-                this.set("downPath", this._getPath(node));
-                return val;
-            }
         }
     }
 });
@@ -1389,18 +2262,27 @@ Y.extend(Y.ThresholdLines, Y.Lines, {
     destructor: function() {
         var path,
             width = this.get("width"),
-            height = this.get("height");
+            height = this.get("height"),
+            context,
+            canvas,
+            parentNode;
         if(this._paths) {
             while(this._paths.length > 0) {
                 path = this._paths.pop();
                 if(path instanceof Y.Shape) {
                     path.destroy();
                 } else {
-                     if(path.context) {
-                        path.context.clearRect(0, 0, width, height);
+                     context = path.context;
+                     canvas = path.canvas;
+                     if(context) {
+                        context.clearRect(0, 0, width, height);
                      }
-                     if(path.canvas) {
-                        path.canvas.parentNode.removeChild(path.canvas);
+                     if(canvas) {
+                        parentNode = canvas.parentNode;
+                        Y.Event.purgeElement(canvas, true);
+                        if(parentNode) {
+                            parentNode.removeChild(path.canvas);
+                        }
                      }
                 }
             }
@@ -1417,17 +2299,12 @@ Y.extend(Y.ThresholdLines, Y.Lines, {
  * scale.
  *
  * @class ThresholdCanvasLines
- * @extends Lines
+ * @extends ThresholdLines
+ * @uses CanvasLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  */
-Y.ThresholdCanvasLines = function() {
-    Y.ThresholdCanvasLines.superclass.constructor.apply(this, arguments);
-};
-
-Y.ThresholdCanvasLines.NAME = "thresholdCanvasLines";
-
-Y.extend(Y.ThresholdCanvasLines,  Y.ThresholdLines, {
+Y.ThresholdCanvasLines = Y.Base.create("tresholdCanvasLines", Y.ThresholdLines, [Y.CanvasLines],  {
     /**
      * Returns an array of path elements in which to draw the lines.
      *
@@ -1480,104 +2357,6 @@ Y.extend(Y.ThresholdCanvasLines,  Y.ThresholdLines, {
             this._clearPaths(paths);
         }
         return paths;
-    },
-
-    /**
-     * Draws a dashed line between two points.
-     *
-     * @method drawDashedLine
-     * @param {Object} path Reference to the object in which the line will be drawn.
-     * @param {Number} xStart	The x position of the start of the line
-     * @param {Number} yStart	The y position of the start of the line
-     * @param {Number} xEnd		The x position of the end of the line
-     * @param {Number} yEnd		The y position of the end of the line
-     * @param {Number} dashSize	the size of dashes, in pixels
-     * @param {Number} gapSize	the size of gaps between dashes, in pixels
-     * @private
-     */
-    drawDashedLine: function(path, xStart, yStart, xEnd, yEnd, dashSize, gapSize) {
-        var context = path.context;
-        Y.ThresholdCanvasLines.superclass.drawDashedLine.apply(this, [
-            context,
-            xStart,
-            yStart,
-            xEnd,
-            yEnd,
-            dashSize,
-            gapSize
-        ]);
-    },
-
-    /**
-     * Executes moveTo.
-     *
-     * @method _moveTo
-     * @param {Object} Object containing a reference to the canvas and context.
-     * @param {Number} x The x coordinate.
-     * @param {Number} y The y coordinate.
-     * @private
-     */
-    _moveTo: function(path, x, y) {
-        path.context.moveTo(x, y);
-    },
-
-    /**
-     * Draws a line.
-     *
-     * @method _lineTo
-     * @param {Object} Object containing a reference to the canvas and context.
-     * @param {Number} x The x coordinate.
-     * @param {Number} y The y coordinate.
-     * @private
-     */
-    _lineTo: function(path, x, y) {
-        path.context.lineTo(x, y);
-    },
-
-    /**
-     * Clears path instances.
-     *
-     * @method _clearPaths
-     * @param {Path|Array} path A path element or an array of path elements.
-     * @private
-     */
-    _clearPaths: function(path) {
-        var i,
-            len,
-            width = this.get("width"),
-            height = this.get("height");
-        if(Y.Lang.isArray(path)) {
-            len = path.length;
-            for(i = 0; i < len; i = i + 1) {
-                path[i].context.clearRect(0, 0, width, height);
-            }
-        } else {
-            path.context.clearRect(0, 0, width, height);
-        }
-    },
-
-    /**
-     * Closes path instances.
-     *
-     * @method _endPaths
-     * @param {Path|Array} path A path element or an array of path elements.
-     * @private
-     */
-    _endPaths: function(path) {
-        var i,
-            len;
-        if(Y.Lang.isArray(path)) {
-            len = path.length;
-            for(i = 0; i < len; i = i + 1) {
-                path[i].context.lineWidth = path[i].lineWidth;
-                path[i].context.strokeStyle = path[i].strokeStyle;
-                path[i].context.stroke();
-            }
-        } else {
-            path.context.lineWidth = path.lineWidth;
-            path.context.strokeStyle = path.strokeStyle;
-            path.context.stroke();
-        }
     }
 }, {
     ATTRS: {
@@ -1714,11 +2493,17 @@ Y.ThresholdLineSeries = Y.Base.create("thresholdLineSeries", Y.SeriesBase, [Y.Li
  *
  * @class ThresholdCanvasLineSeries
  * @extends ThresholdLineSeries
+ * @uses CanvasSeriesImpl
+ * @uses CanvasLines
  * @uses ThresholdCanvasLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  */
-Y.ThresholdCanvasLineSeries = Y.Base.create("thresholdCanvasLineSeries", Y.ThresholdLineSeries, [Y.ThresholdCanvasLines]);
+Y.ThresholdCanvasLineSeries = Y.Base.create(
+    "thresholdCanvasLineSeries",
+    Y.ThresholdLineSeries,
+    [Y.CanvasSeriesImpl, Y.CanvasLines, Y.ThresholdCanvasLines]
+);
 /**
  * Provides functionality for creating a line series with alternating colors based on thresholds.
  *
@@ -3812,7 +4597,12 @@ Y.StockIndicatorsPrinter.prototype = {
     _graphClassMap: {
         thresholdline: Y.ThresholdCanvasLineSeries,
         multipleline: Y.MultipleLineCanvasSeries,
-        volumecolumn: Y.VolumeColumnCanvas
+        volumecolumn: Y.VolumeColumnCanvas,
+        candlestick: Y.CanvasCandlestickSeries,
+        ohlc: Y.CanvasOHLCSeries,
+        line: Y.CanvasLineSeries,
+        area: Y.CanvasAreaSeries,
+        combo: Y.CanvasComboSeries
     },
 
     /**
@@ -4115,8 +4905,10 @@ Y.StockIndicatorsPrinter.prototype = {
             config;
         for(i = 0; i < len; i = i + 1) {
             config = configs[i];
-            legend = new Y.StockIndicatorsCanvasAxisLegend(config);
-            legends.push(legend);
+            if(config.type === "axis") {
+                legend = new Y.StockIndicatorsCanvasAxisLegend(config);
+                legends.push(legend);
+            }
         }
         return legends;
     },
@@ -4152,12 +4944,14 @@ Y.StockIndicatorsPrinter.prototype = {
                 config.width = dimension.width;
                 config.height = dimension.height;
                 GraphClass = this._graphClassMap[config.type];
-                config.graphic = Y.Node.create('<div>');
-                graph = new GraphClass(config);
-                graph.set("width", config.width);
-                graph.set("height", config.height);
-                graph.draw();
-                graphs.push(graph);
+                if(GraphClass) {
+                    config.graphic = Y.Node.create('<div>');
+                    graph = new GraphClass(config);
+                    graph.set("width", config.width);
+                    graph.set("height", config.height);
+                    graph.draw();
+                    graphs.push(graph);
+                }
             }
         }
         return graphs;
@@ -4236,14 +5030,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             configs = this.get("charts"),
             cb = this.get("contentBox"),
             i,
-            len = configs.length;
+            len = configs.length,
+            canvas = DOCUMENT.createElement("canvas");
         this._removeAll();
         for(i = 0; i < len; i = i + 1) {
             charts[i] = this.drawChart(configs[i], cb);
         }
         this._charts = charts;
         this._addEvents();
-        if(DOCUMENT && DOCUMENT.createElement("canvas")) {
+        if(canvas && canvas.getContext("2d")) {
             this._printStockIndicators = new Y.StockIndicatorsPrinter(charts, this.get("width"), this.get("height"));
         }
     },
