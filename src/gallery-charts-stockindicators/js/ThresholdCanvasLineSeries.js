@@ -8,8 +8,14 @@
  *
  * @class ThresholdCanvasLineSeries
  * @extends ThresholdLineSeries
+ * @uses CanvasSeriesImpl
+ * @uses CanvasLines
  * @uses ThresholdCanvasLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  */
-Y.ThresholdCanvasLineSeries = Y.Base.create("thresholdCanvasLineSeries", Y.ThresholdLineSeries, [Y.ThresholdCanvasLines]);
+Y.ThresholdCanvasLineSeries = Y.Base.create(
+    "thresholdCanvasLineSeries",
+    Y.ThresholdLineSeries,
+    [Y.CanvasSeriesImpl, Y.CanvasLines, Y.ThresholdCanvasLines]
+);

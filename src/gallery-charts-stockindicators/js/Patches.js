@@ -4,7 +4,9 @@
  * @module gallery-charts-stockindicators
  */
     var WINDOW = Y.config.win,
-        DOCUMENT = Y.config.doc;
+        DOCUMENT = Y.config.doc,
+        Y_Color = Y.Color,
+        TOHEX = Y_Color.toHex;
     Y.Axis.prototype.getLabel = function(styles)
     {
         var i,

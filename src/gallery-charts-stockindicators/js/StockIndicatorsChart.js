@@ -70,14 +70,15 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             configs = this.get("charts"),
             cb = this.get("contentBox"),
             i,
-            len = configs.length;
+            len = configs.length,
+            canvas = DOCUMENT.createElement("canvas");
         this._removeAll();
         for(i = 0; i < len; i = i + 1) {
             charts[i] = this.drawChart(configs[i], cb);
         }
         this._charts = charts;
         this._addEvents();
-        if(DOCUMENT && DOCUMENT.createElement("canvas")) {
+        if(canvas && canvas.getContext("2d")) {
             this._printStockIndicators = new Y.StockIndicatorsPrinter(charts, this.get("width"), this.get("height"));
         }
     },

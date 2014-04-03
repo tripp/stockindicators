@@ -235,18 +235,27 @@ Y.extend(Y.ThresholdLines, Y.Lines, {
     destructor: function() {
         var path,
             width = this.get("width"),
-            height = this.get("height");
+            height = this.get("height"),
+            context,
+            canvas,
+            parentNode;
         if(this._paths) {
             while(this._paths.length > 0) {
                 path = this._paths.pop();
                 if(path instanceof Y.Shape) {
                     path.destroy();
                 } else {
-                     if(path.context) {
-                        path.context.clearRect(0, 0, width, height);
+                     context = path.context;
+                     canvas = path.canvas;
+                     if(context) {
+                        context.clearRect(0, 0, width, height);
                      }
-                     if(path.canvas) {
-                        path.canvas.parentNode.removeChild(path.canvas);
+                     if(canvas) {
+                        parentNode = canvas.parentNode;
+                        Y.Event.purgeElement(canvas, true);
+                        if(parentNode) {
+                            parentNode.removeChild(path.canvas);
+                        }
                      }
                 }
             }

@@ -28,7 +28,12 @@ Y.StockIndicatorsPrinter.prototype = {
     _graphClassMap: {
         thresholdline: Y.ThresholdCanvasLineSeries,
         multipleline: Y.MultipleLineCanvasSeries,
-        volumecolumn: Y.VolumeColumnCanvas
+        volumecolumn: Y.VolumeColumnCanvas,
+        candlestick: Y.CanvasCandlestickSeries,
+        ohlc: Y.CanvasOHLCSeries,
+        line: Y.CanvasLineSeries,
+        area: Y.CanvasAreaSeries,
+        combo: Y.CanvasComboSeries
     },
 
     /**
@@ -331,8 +336,10 @@ Y.StockIndicatorsPrinter.prototype = {
             config;
         for(i = 0; i < len; i = i + 1) {
             config = configs[i];
-            legend = new Y.StockIndicatorsCanvasAxisLegend(config);
-            legends.push(legend);
+            if(config.type === "axis") {
+                legend = new Y.StockIndicatorsCanvasAxisLegend(config);
+                legends.push(legend);
+            }
         }
         return legends;
     },
@@ -368,12 +375,14 @@ Y.StockIndicatorsPrinter.prototype = {
                 config.width = dimension.width;
                 config.height = dimension.height;
                 GraphClass = this._graphClassMap[config.type];
-                config.graphic = Y.Node.create('<div>');
-                graph = new GraphClass(config);
-                graph.set("width", config.width);
-                graph.set("height", config.height);
-                graph.draw();
-                graphs.push(graph);
+                if(GraphClass) {
+                    config.graphic = Y.Node.create('<div>');
+                    graph = new GraphClass(config);
+                    graph.set("width", config.width);
+                    graph.set("height", config.height);
+                    graph.draw();
+                    graphs.push(graph);
+                }
             }
         }
         return graphs;

@@ -8,17 +8,12 @@
  * scale.
  *
  * @class ThresholdCanvasLines
- * @extends Lines
+ * @extends ThresholdLines
+ * @uses CanvasLines
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  */
-Y.ThresholdCanvasLines = function() {
-    Y.ThresholdCanvasLines.superclass.constructor.apply(this, arguments);
-};
-
-Y.ThresholdCanvasLines.NAME = "thresholdCanvasLines";
-
-Y.extend(Y.ThresholdCanvasLines,  Y.ThresholdLines, {
+Y.ThresholdCanvasLines = Y.Base.create("tresholdCanvasLines", Y.ThresholdLines, [Y.CanvasLines],  {
     /**
      * Returns an array of path elements in which to draw the lines.
      *
@@ -71,104 +66,6 @@ Y.extend(Y.ThresholdCanvasLines,  Y.ThresholdLines, {
             this._clearPaths(paths);
         }
         return paths;
-    },
-
-    /**
-     * Draws a dashed line between two points.
-     *
-     * @method drawDashedLine
-     * @param {Object} path Reference to the object in which the line will be drawn.
-     * @param {Number} xStart	The x position of the start of the line
-     * @param {Number} yStart	The y position of the start of the line
-     * @param {Number} xEnd		The x position of the end of the line
-     * @param {Number} yEnd		The y position of the end of the line
-     * @param {Number} dashSize	the size of dashes, in pixels
-     * @param {Number} gapSize	the size of gaps between dashes, in pixels
-     * @private
-     */
-    drawDashedLine: function(path, xStart, yStart, xEnd, yEnd, dashSize, gapSize) {
-        var context = path.context;
-        Y.ThresholdCanvasLines.superclass.drawDashedLine.apply(this, [
-            context,
-            xStart,
-            yStart,
-            xEnd,
-            yEnd,
-            dashSize,
-            gapSize
-        ]);
-    },
-
-    /**
-     * Executes moveTo.
-     *
-     * @method _moveTo
-     * @param {Object} Object containing a reference to the canvas and context.
-     * @param {Number} x The x coordinate.
-     * @param {Number} y The y coordinate.
-     * @private
-     */
-    _moveTo: function(path, x, y) {
-        path.context.moveTo(x, y);
-    },
-
-    /**
-     * Draws a line.
-     *
-     * @method _lineTo
-     * @param {Object} Object containing a reference to the canvas and context.
-     * @param {Number} x The x coordinate.
-     * @param {Number} y The y coordinate.
-     * @private
-     */
-    _lineTo: function(path, x, y) {
-        path.context.lineTo(x, y);
-    },
-
-    /**
-     * Clears path instances.
-     *
-     * @method _clearPaths
-     * @param {Path|Array} path A path element or an array of path elements.
-     * @private
-     */
-    _clearPaths: function(path) {
-        var i,
-            len,
-            width = this.get("width"),
-            height = this.get("height");
-        if(Y.Lang.isArray(path)) {
-            len = path.length;
-            for(i = 0; i < len; i = i + 1) {
-                path[i].context.clearRect(0, 0, width, height);
-            }
-        } else {
-            path.context.clearRect(0, 0, width, height);
-        }
-    },
-
-    /**
-     * Closes path instances.
-     *
-     * @method _endPaths
-     * @param {Path|Array} path A path element or an array of path elements.
-     * @private
-     */
-    _endPaths: function(path) {
-        var i,
-            len;
-        if(Y.Lang.isArray(path)) {
-            len = path.length;
-            for(i = 0; i < len; i = i + 1) {
-                path[i].context.lineWidth = path[i].lineWidth;
-                path[i].context.strokeStyle = path[i].strokeStyle;
-                path[i].context.stroke();
-            }
-        } else {
-            path.context.lineWidth = path.lineWidth;
-            path.context.strokeStyle = path.strokeStyle;
-            path.context.stroke();
-        }
     }
 }, {
     ATTRS: {
