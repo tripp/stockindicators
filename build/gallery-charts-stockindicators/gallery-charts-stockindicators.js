@@ -1116,18 +1116,18 @@ Y.CanvasSeriesImpl.prototype = {
         return val;
     },
 
-   /**
-    * Draws a rectangle.
-    *
-    * @method _drawRect
-    * @param {Context} context Reference to the context in which to draw the rectangle.
-    * @param {Number} x The x-coordinate in which to start the drawing.
-    * @param {Number} y The y-coordinate in which to start the drawing.
-    * @param {Number} width The width of the rectangle.
-    * @param {Number} height The height of the rectangle.
-    * return Context
-    * @private
-    */
+    /**
+     * Draws a rectangle.
+     *
+     * @method _drawRect
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x The x-coordinate in which to start the drawing.
+     * @param {Number} y The y-coordinate in which to start the drawing.
+     * @param {Number} width The width of the rectangle.
+     * @param {Number} height The height of the rectangle.
+     * return Context
+     * @private
+     */
     _drawRect: function(context, x, y, width, height) {
         context.moveTo(x, y);
         context.lineTo(x + width, y);
@@ -1138,10 +1138,94 @@ Y.CanvasSeriesImpl.prototype = {
     },
 
     /**
+     * Draws a circle based on a circumference param.
+     *
+     * @method _drawCircleByCircumference
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x y-coordinate
+     * @param {Number} y x-coordinate
+     * @param {Number} circum Circumference of the circle.
+     * return Context
+     * @private
+     */
+    _drawCircleByCircumference: function(context, x, y, circum) {
+        var startAngle = 0,
+            endAngle = 2 * Math.PI,
+            radius =  circum/2;
+        context.moveTo(x, y);
+        context.arc(x + radius, y + radius, radius, startAngle, endAngle, false);
+        return context;
+    },
+
+    /**
+     * Draws a diamond.
+     *
+     * @method _drawDiamond
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x y-coordinate
+     * @param {Number} y x-coordinate
+     * @param {Number} width width
+     * @param {Number} height height
+     * return Context
+     * @private
+     */
+    _drawDiamond: function(context, x, y, width, height)
+    {
+        var midWidth = width * 0.5,
+            midHeight = height * 0.5;
+        context.moveTo(x + midWidth, y);
+        context.lineTo(x + width, y + midHeight);
+        context.lineTo(x + midWidth, y + height);
+        context.lineTo(x, y + midHeight);
+        context.lineTo(x + midWidth, y);
+        return context;
+    },
+
+    /**
+     * Draws an ellipse.
+     *
+     * @method _drawEllipse
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x x-coordinate
+     * @param {Number} y y-coordinate
+     * @param {Number} w width
+     * @param {Number} h height
+     * return Context
+     * @private
+     */
+	_drawEllipse: function(context, x, y, w, h) {
+        var l = 8,
+            theta = -(45/180) * Math.PI,
+            angle = 0,
+            angleMid,
+            radius = w/2,
+            yRadius = h/2,
+            i,
+            centerX = x + radius,
+            centerY = y + yRadius,
+            ax, ay, bx, by, cx, cy;
+
+        ax = centerX + Math.cos(0) * radius;
+        ay = centerY + Math.sin(0) * yRadius;
+        context.moveTo(ax, ay);
+        for(i = 0; i < l; i++)
+        {
+            angle += theta;
+            angleMid = angle - (theta / 2);
+            bx = centerX + Math.cos(angle) * radius;
+            by = centerY + Math.sin(angle) * yRadius;
+            cx = centerX + Math.cos(angleMid) * (radius / Math.cos(theta / 2));
+            cy = centerY + Math.sin(angleMid) * (yRadius / Math.cos(theta / 2));
+            context.quadraticCurveTo(cx, cy, bx, by);
+        }
+        return context;
+    },
+
+    /**
      * Destructor implementation for canvas implementations of graphs.
      *
      * @method destructor
-     * @protected
+     * @private
      */
     destructor: function() {
         var path,
@@ -1414,6 +1498,146 @@ Y.CanvasLineSeries = Y.Base.create("lineSeries", Y.LineSeries, [Y.CanvasSeriesIm
          * @default canvasLine
          */
         type: "canvasLine"
+    }
+});
+/**
+ * Provides functionality for drawing plots in a series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * Utility class used for drawing plots.
+ *
+ * @class CanvasPlots
+ * @extends Plots
+ * @constructor
+ */
+Y.CanvasPlots = function() {};
+Y.extend(Y.CanvasPlots, Y.Plots, {
+    /*
+     * Draws plots for the series.
+     *
+     * @method drawPlots
+     * @protected
+     */
+    drawPlots: function() {
+        if(!this.get("xcoords") || this.get("xcoords").length < 1)
+		{
+			return;
+		}
+        var isNumber = Y.Lang.isNumber,
+            styles = this._copyObject(this.get("styles").marker),
+            w = styles.width,
+            h = styles.height,
+            xcoords = this.get("xcoords"),
+            ycoords = this.get("ycoords"),
+            i,
+            len = xcoords.length,
+            top = ycoords[0],
+            left,
+            offsetWidth = w/2,
+            offsetHeight = h/2,
+            shapeMethod = this._getShapeMethod(styles.shape),
+            path = this.get("markerPath"),
+            context = path.context,
+            canvas = path.canvas,
+            shapeDrawn = false,
+            fill = styles.fill,
+            fillColor = styles.fill.color,
+            fillAlpha = styles.fill.alpha,
+            stroke = styles.border,
+            strokeColor = stroke.color,
+            strokeWeight = stroke.weight,
+            strokeAlpha = stroke.alpha,
+            drawFill = fill && fillColor,
+            drawStroke = stroke && strokeWeight && strokeColor;
+        this._clearPaths(path);
+        canvas.width = this.get("width");
+        canvas.height = this.get("height");
+        if(shapeMethod) {
+            if(drawFill) {
+                context.fillStyle = isNumber(fillAlpha) ? this._toRGBA(fillColor, fillAlpha) : fillColor;
+            }
+            if(drawStroke) {
+                context.strokeStyle = isNumber(strokeAlpha) ? this._toRGBA(strokeColor, strokeAlpha) : strokeColor;
+                context.lineWidth = strokeWeight;
+            }
+            context.beginPath();
+            for(i = 0; i < len; i = i + 1) {
+                top = parseFloat(ycoords[i] - offsetHeight);
+                left = parseFloat(xcoords[i] - offsetWidth);
+                if(isNumber(left) && isNumber(top))
+                {
+                    shapeDrawn = true;
+                    context = shapeMethod(context, left, top, w, h);
+                }
+            }
+            if(shapeDrawn) {
+                if(drawFill) {
+                    context.closePath();
+                    context.fill();
+                }
+                if(drawStroke) {
+                    context.stroke();
+                }
+            }
+        }
+    },
+
+    /**
+     * Returns a method to draw a specified shape.
+     *
+     * @method _getShapeMethod
+     * @param {String} shape The shape to be drawn.
+     * @return Function
+     * @private
+     */
+    _getShapeMethod: function(shape) {
+        var shapes = {
+                rect: this._drawRect,
+                circle: this._drawCircleByCircumference,
+                ellipse: this._drawEllipse
+            };
+        return shapes[shape];
+    }
+});
+/**
+ * Provides functionality for creating a marker series.
+ *
+ * @module gallery-charts-stockindicators
+ */
+/**
+ * The CanvasMarkersSeries class renders quantitative data on a graph by plotting relevant data points.
+ *
+ * @class CanvasMarkersSeries
+ * @extends MarkerSeries
+ * @uses CanvasSeriesImpl
+ * @uses CanvasPlots
+ * @constructor
+ * @param {Object} config (optional) Configuration parameters.
+ */
+Y.CanvasMarkerSeries = Y.Base.create("markerSeries", Y.MarkerSeries, [Y.Plots, Y.CanvasSeriesImpl, Y.CanvasPlots], {
+    /**
+     * Returns a the name of the attributes that reference path
+     * objects.
+     *
+     * @method _getPathAttrs
+     * @return Array
+     * @private
+     */
+    _getPathAttrs: function() {
+        return ["markerPath"];
+    }
+}, {
+    ATTRS: {
+        /**
+         * Read-only attribute indicating the type of series.
+         *
+         * @attribute type
+         * @type String
+         * @default canvasMarker
+         */
+        type: "canvasMarker"
     }
 });
 /**
@@ -4602,7 +4826,8 @@ Y.StockIndicatorsPrinter.prototype = {
         ohlc: Y.CanvasOHLCSeries,
         line: Y.CanvasLineSeries,
         area: Y.CanvasAreaSeries,
-        combo: Y.CanvasComboSeries
+        combo: Y.CanvasComboSeries,
+        marker: Y.CanvasMarkerSeries
     },
 
     /**
