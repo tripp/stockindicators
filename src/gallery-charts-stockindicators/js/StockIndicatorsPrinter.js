@@ -34,7 +34,8 @@ Y.StockIndicatorsPrinter.prototype = {
         line: Y.CanvasLineSeries,
         area: Y.CanvasAreaSeries,
         combo: Y.CanvasComboSeries,
-        marker: Y.CanvasMarkerSeries
+        marker: Y.CanvasMarkerSeries,
+        column: Y.CanvasColumnSeries
     },
 
     /**

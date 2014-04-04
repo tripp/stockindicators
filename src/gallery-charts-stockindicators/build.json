@@ -19,6 +19,7 @@
                 "CanvasFills.js",
                 "CanvasAreaSeries.js",
                 "CanvasComboSeries.js",
+                "CanvasColumnSeries.js",
                 "CanvasCandlestickSeries.js",
                 "CanvasOHLCSeries.js",
                 "VolumeColumnCanvas.js",

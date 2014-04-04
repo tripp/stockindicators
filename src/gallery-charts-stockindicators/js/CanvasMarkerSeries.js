@@ -13,7 +13,7 @@
  * @constructor
  * @param {Object} config (optional) Configuration parameters.
  */
-Y.CanvasMarkerSeries = Y.Base.create("markerSeries", Y.MarkerSeries, [Y.Plots, Y.CanvasSeriesImpl, Y.CanvasPlots], {
+Y.CanvasMarkerSeries = Y.Base.create("canvasMarkerSeries", Y.MarkerSeries, [Y.Plots, Y.CanvasSeriesImpl, Y.CanvasPlots], {
     /**
      * Returns a the name of the attributes that reference path
      * objects.
