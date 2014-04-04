@@ -203,18 +203,18 @@ Y.CanvasSeriesImpl.prototype = {
         return val;
     },
 
-   /**
-    * Draws a rectangle.
-    *
-    * @method _drawRect
-    * @param {Context} context Reference to the context in which to draw the rectangle.
-    * @param {Number} x The x-coordinate in which to start the drawing.
-    * @param {Number} y The y-coordinate in which to start the drawing.
-    * @param {Number} width The width of the rectangle.
-    * @param {Number} height The height of the rectangle.
-    * return Context
-    * @private
-    */
+    /**
+     * Draws a rectangle.
+     *
+     * @method _drawRect
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x The x-coordinate in which to start the drawing.
+     * @param {Number} y The y-coordinate in which to start the drawing.
+     * @param {Number} width The width of the rectangle.
+     * @param {Number} height The height of the rectangle.
+     * return Context
+     * @private
+     */
     _drawRect: function(context, x, y, width, height) {
         context.moveTo(x, y);
         context.lineTo(x + width, y);
@@ -225,10 +225,94 @@ Y.CanvasSeriesImpl.prototype = {
     },
 
     /**
+     * Draws a circle based on a circumference param.
+     *
+     * @method _drawCircleByCircumference
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x y-coordinate
+     * @param {Number} y x-coordinate
+     * @param {Number} circum Circumference of the circle.
+     * return Context
+     * @private
+     */
+    _drawCircleByCircumference: function(context, x, y, circum) {
+        var startAngle = 0,
+            endAngle = 2 * Math.PI,
+            radius =  circum/2;
+        context.moveTo(x, y);
+        context.arc(x + radius, y + radius, radius, startAngle, endAngle, false);
+        return context;
+    },
+
+    /**
+     * Draws a diamond.
+     *
+     * @method _drawDiamond
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x y-coordinate
+     * @param {Number} y x-coordinate
+     * @param {Number} width width
+     * @param {Number} height height
+     * return Context
+     * @private
+     */
+    _drawDiamond: function(context, x, y, width, height)
+    {
+        var midWidth = width * 0.5,
+            midHeight = height * 0.5;
+        context.moveTo(x + midWidth, y);
+        context.lineTo(x + width, y + midHeight);
+        context.lineTo(x + midWidth, y + height);
+        context.lineTo(x, y + midHeight);
+        context.lineTo(x + midWidth, y);
+        return context;
+    },
+
+    /**
+     * Draws an ellipse.
+     *
+     * @method _drawEllipse
+     * @param {Context} context Reference to the context in which to draw the rectangle.
+     * @param {Number} x x-coordinate
+     * @param {Number} y y-coordinate
+     * @param {Number} w width
+     * @param {Number} h height
+     * return Context
+     * @private
+     */
+	_drawEllipse: function(context, x, y, w, h) {
+        var l = 8,
+            theta = -(45/180) * Math.PI,
+            angle = 0,
+            angleMid,
+            radius = w/2,
+            yRadius = h/2,
+            i,
+            centerX = x + radius,
+            centerY = y + yRadius,
+            ax, ay, bx, by, cx, cy;
+
+        ax = centerX + Math.cos(0) * radius;
+        ay = centerY + Math.sin(0) * yRadius;
+        context.moveTo(ax, ay);
+        for(i = 0; i < l; i++)
+        {
+            angle += theta;
+            angleMid = angle - (theta / 2);
+            bx = centerX + Math.cos(angle) * radius;
+            by = centerY + Math.sin(angle) * yRadius;
+            cx = centerX + Math.cos(angleMid) * (radius / Math.cos(theta / 2));
+            cy = centerY + Math.sin(angleMid) * (yRadius / Math.cos(theta / 2));
+            context.quadraticCurveTo(cx, cy, bx, by);
+        }
+        return context;
+    },
+
+    /**
      * Destructor implementation for canvas implementations of graphs.
      *
      * @method destructor
-     * @protected
+     * @private
      */
     destructor: function() {
         var path,

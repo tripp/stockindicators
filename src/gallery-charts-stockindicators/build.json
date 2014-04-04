@@ -14,6 +14,8 @@
                 "CanvasSeriesImpl.js",
                 "CanvasLines.js",
                 "CanvasLineSeries.js",
+                "CanvasPlots.js",
+                "CanvasMarkerSeries.js",
                 "CanvasFills.js",
                 "CanvasAreaSeries.js",
                 "CanvasComboSeries.js",
