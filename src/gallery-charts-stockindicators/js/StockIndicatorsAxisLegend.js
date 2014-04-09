@@ -182,8 +182,8 @@ Y.StockIndicatorsAxisLegend.prototype = {
             minLabel = DOCUMENT.createElement("span"),
             height,
             width,
-            minText = this._labelFunction.apply(this, [this._minimum, this._labelFormat]),
-            maxText = this._labelFunction.apply(this, [this._maximum, this._labelFormat]),
+            minText = this._labelFunction(this._minimum, this._labelFormat),
+            maxText = this._labelFunction(this._maximum, this._labelFormat),
             container = DOCUMENT.createElement("div"),
             arrow = DOCUMENT.createElement("span"),
             key,
@@ -283,7 +283,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
             arrow = DOCUMENT.createElement("span"),
             label = DOCUMENT.createElement("span"),
             key,
-            text = this._labelFunction.apply(this, [value, this._labelFormat]),
+            text = this._labelFunction(value, this._labelFormat),
             ycoord = previousClose.ycoord ||
                 axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
         ycoord = ycoord + this._y;
@@ -447,7 +447,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
                     label.style.background = background;
                     arrow.style.borderRightColor = background;
                 }
-                text = this._labelFunction.apply(this, [value, this._labelFormat]),
+                text = this._labelFunction(value, this._labelFormat),
                 ycoord = this._y + axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
                 label.appendChild(DOCUMENT.createTextNode(text));
                 container.style.position = "absolute";

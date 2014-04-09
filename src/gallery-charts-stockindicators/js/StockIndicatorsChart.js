@@ -15,7 +15,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      */
     initializer: function() {
         var cb = this.get("contentBox");
-        cb.setStyle("position", "relative");
+        cb._node.style.position = "relative";
         this._axes = [];
         this._graphs = [];
         this._graphics = [];
@@ -266,7 +266,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     startTimeline: function() {
         if(!this._runTimeline) {
             this._runTimeline = true;
-            this._timelineStart = (new Date()).valueOf() - 17;
+            this._timelineStart = +new Date() - 17;
             this.redraw();
         }
     },
@@ -299,7 +299,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             chart,
             i,
             len = charts.length,
-            endTime = (new Date()).valueOf();
+            endTime = +new Date();
         if(endTime >= this._timelineStart + 17) {
             for(i = 0; i < len; i = i + 1) {
                 chart = charts[i];
@@ -312,7 +312,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     legend.redraw();
                 }
             }
-            this._timelineStart = (new Date()).valueOf();
+            this._timelineStart = +new Date();
         }
         if(this._runTimeline && !this._autoDraw) {
             this._timelineId = this._onEnterFrame.apply(WINDOW, [function() {
@@ -375,13 +375,19 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             valueLen,
             valueKey,
             groupMarkers,
-            nomarkers = ["candlestick", "line", "ohlc", "volumecolumn", "multipleline"];
+            nomarkers = {
+                "candlestick": true,
+                "line": true,
+                "ohlc": true,
+                "volumecolumn": true,
+                "multipleline": true
+            };
         for(indIter = 0; indIter < indLen; indIter = indIter + 1) {
             indicator = indicators[indIter];
             valueKey = indicator.valueKey;
             indicatorType = indicator.type;
             if(indicatorType === "candlestick" || indicatorType === "ohlc" || typeof valueKey === "string") {
-                groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                 seriesConfig = {
                     groupMarkers: groupMarkers,
                     type: indicator.type,
@@ -398,10 +404,10 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                         yKey: indicator.valueKey[valueIter]
                     };
                     if(typeof indicatorType === "string") {
-                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                        seriesConfig.groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                         seriesConfig.type = indicatorType;
                     } else {
-                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
+                        seriesConfig.groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
                         if(indicatorType[valueIter] === "multipleline" && config.threshold && config.range === "1d") {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
@@ -661,11 +667,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
-        bb.setStyle("left", 0 + "px");
-        bb.setStyle("top", dateConfig.y + "px");
+        bb._node.style.left = 0;
+        bb._node.style.top = dateConfig.y + "px";
+
         bb = numericAxis.get("boundingBox");
-        bb.setStyle("left", numericConfig.x + "px");
-        bb.setStyle("top", numericConfig.y + "px");
+        bb._node.style.left = numericConfig.x + "px";
+        bb._node.style.top = numericConfig.y + "px";
         axes = {
             numeric: numericAxis,
             date: dateAxis
@@ -843,7 +850,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             key,
             color,
             crosshairKey,
-            validKeys = config.keys;
+            validKeys = Y.Array.hash(config.keys);
+
         for(key in graphs) {
             if(graphs.hasOwnProperty(key)){
                 crosshairKey = key === "quote" ? "close" : key;
@@ -852,7 +860,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 if(color && typeof color === "object" && graph.get("type") === "combo") {
                     color = color.line;
                 }
-                if(Y.Array.indexOf(validKeys, crosshairKey) > -1) {
+                if(validKeys[crosshairKey]) {
                     series = {
                         marker: {
                             shape: "circle",
@@ -1197,15 +1205,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 }
             }
         }
-        if(this._startHandle) {
-            this._startHandle.detach();
-        }
-        if(this._moveHandle) {
-            this._moveHandle.detach();
-        }
-        if(this._endHandle) {
-            this._endHandle.detach();
-        }
+        this._startHandle.detach();
+        this._moveHandle.detach();
+        this._endHandle.detach();
     },
 
     destructor: function() {

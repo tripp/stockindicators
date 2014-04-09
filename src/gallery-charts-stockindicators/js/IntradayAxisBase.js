@@ -28,8 +28,8 @@ Y.extend(Y.IntradayAxisBase, Y.CategoryAxisBase, {
             last = allData[allData.length - 1].Timestamp;
         if(dataGranularity) {
             interval = parseFloat(dataGranularity) * 60000;
-            max = new Date(max).valueOf();
-            last = new Date(last).valueOf();
+            max = +new Date(max);
+            last = +new Date(last);
 
             if(max > last) {
                 while(max > last) {

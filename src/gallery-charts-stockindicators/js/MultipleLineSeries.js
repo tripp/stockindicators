@@ -27,8 +27,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         {
             return;
         }
-        var isNumber = Y.Lang.isNumber,
-            direction = this.get("direction"),
+        var direction = this.get("direction"),
             len,
             lastPointValid,
             pointValid,
@@ -70,7 +69,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         {
             nextX = Math.round(xcoords[i] * 1000)/1000;
             nextY = Math.round(ycoords[i] * 1000)/1000;
-            pointValid = isNumber(nextX) && isNumber(nextY);
+            pointValid = typeof nextX === "number" && typeof nextY === "number";
             if(pointValid) {
                 thresholdIndex = 0;
                 if(thresholds) {
@@ -92,7 +91,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                         m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
                         intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
                         intersectY = thresholdCoords[thresholdIndex];
-                        if(isNumber(lastPathIndex)) {
+                        if(typeof lastPathIndex === "number") {
                             this._lineTo(graphPaths[lastPathIndex], intersectX, intersectY);
                         }
                         this._moveTo(graphPaths[pathIndex], intersectX, intersectY);

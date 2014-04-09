@@ -73,7 +73,7 @@ StockIndicatorsLegend.prototype = {
             this.dateLabelFunction = cfg.dateLabelFunction;
             this.dateLabelFormat = cfg.dateLabelFormat;
             this.dateLabelScope = cfg.dateLabelScope || this;
-            cfg.render.getDOMNode().appendChild(this.contentDiv);
+            cfg.render._node.appendChild(this.contentDiv);
 
             len = seriesQueue.length;
             myul = Y.DOM.create(
@@ -212,7 +212,7 @@ StockIndicatorsLegend.prototype = {
                     item.li.style.display = "inline-block";
                     val = dataItem[key];
                     item.value.innerHTML = Y.Number.format(parseFloat(val), this.valueLabelFormat);
-                    Y.DOM.setStyle(item.value, "color", val > 0 ? this.priceUpColor : this.priceDownColor);
+                    item.value.style.color = val > 0 ? this.priceUpColor : this.priceDownColor;
                 } else {
                     item.li.style.display = "none";
                 }

@@ -81,10 +81,10 @@ Y.CanvasAxis = Y.Base.create("canvasAxis", Y.AxisBase, [Y.Renderer], Y.merge(Y.A
                 explicitLabels = this._labelValuesExplicitlySet ? this.get("labelValues") : null,
                 direction = (position === "left" || position === "right") ? "vertical" : "horizontal";
             if(margin) {
-                marginLeft = Y.Lang.isNumber(margin.left) ? margin.left : 0;
-                marginRight = Y.Lang.isNumber(margin.right) ? margin.right : 0;
-                marginTop = Y.Lang.isNumber(margin.top) ? margin.top : 0;
-                marginBottom = Y.Lang.isNumber(margin.bottom) ? margin.bottom : 0;
+                marginLeft = typeof margin.left === "number" ? margin.left : 0;
+                marginRight = typeof margin.right === "number" ? margin.right : 0;
+                marginTop = typeof margin.top === "number" ? margin.top : 0;
+                marginBottom = typeof margin.bottom === "number" ? margin.bottom : 0;
             }
             //need to defaultMargins method to the layout classes.
             for(i in defaultMargins)
