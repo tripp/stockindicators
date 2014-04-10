@@ -1065,7 +1065,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             config.legend.width = graphConfig.width;
         }
         legend = this._addLegend(config, cb);
-        if(thresholdStyles && typeof previousClose === "number") {
+        if(thresholdStyles && typeof previousClose === "number" && isFinite(previousClose)) {
             thresholdConfig = {
                 type: "thresholdline",
                 thresholds: [previousClose],

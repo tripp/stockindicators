@@ -107,7 +107,7 @@ Y.Crosshair.prototype = {
             for(i = 0; i < len; i = i + 1) {
                 graph = series[i];
                 y = graph.coords[index];
-                isNumber = typeof y === "number";
+                isNumber = typeof y === "number" && isFinite(y);
 
                 if(graph.marker) {
                     if(isNumber) {
