@@ -199,8 +199,8 @@ Y.extend(Y.IntradayAxisBase, Y.CategoryAxisBase, {
             last = allData[allData.length - 1].Timestamp;
         if(dataGranularity) {
             interval = parseFloat(dataGranularity) * 60000;
-            max = new Date(max).valueOf();
-            last = new Date(last).valueOf();
+            max = +new Date(max);
+            last = +new Date(last);
 
             if(max > last) {
                 while(max > last) {
@@ -318,10 +318,10 @@ Y.CanvasAxis = Y.Base.create("canvasAxis", Y.AxisBase, [Y.Renderer], Y.merge(Y.A
                 explicitLabels = this._labelValuesExplicitlySet ? this.get("labelValues") : null,
                 direction = (position === "left" || position === "right") ? "vertical" : "horizontal";
             if(margin) {
-                marginLeft = Y.Lang.isNumber(margin.left) ? margin.left : 0;
-                marginRight = Y.Lang.isNumber(margin.right) ? margin.right : 0;
-                marginTop = Y.Lang.isNumber(margin.top) ? margin.top : 0;
-                marginBottom = Y.Lang.isNumber(margin.bottom) ? margin.bottom : 0;
+                marginLeft = typeof margin.left === "number" && isFinite(margin.left) ? margin.left : 0;
+                marginRight = typeof margin.right === "number" && isFinite(margin.right) ? margin.right : 0;
+                marginTop = typeof margin.top === "number" && isFinite(margin.top) ? margin.top : 0;
+                marginBottom = typeof margin.bottom === "number" && isFinite(margin.bottom) ? margin.bottom : 0;
             }
             //need to defaultMargins method to the layout classes.
             for(i in defaultMargins)
@@ -2874,8 +2874,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         {
             return;
         }
-        var isNumber = Y.Lang.isNumber,
-            direction = this.get("direction"),
+        var direction = this.get("direction"),
             len,
             lastPointValid,
             pointValid,
@@ -2917,7 +2916,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
         {
             nextX = Math.round(xcoords[i] * 1000)/1000;
             nextY = Math.round(ycoords[i] * 1000)/1000;
-            pointValid = isNumber(nextX) && isNumber(nextY);
+            pointValid = typeof nextX === "number" && isFinite(nextX)  && typeof nextY === "number" && isFinite(nextY);
             if(pointValid) {
                 thresholdIndex = 0;
                 if(thresholds) {
@@ -2939,7 +2938,7 @@ Y.MultipleLineSeries = Y.Base.create("multipleLineSeries", Y.CartesianSeries, [Y
                         m = Math.round(((nextY - lastValidY) / (nextX - lastValidX)) * 1000)/1000;
                         intersectX = ((thresholdCoords[thresholdIndex] - nextY)/m) + nextX;
                         intersectY = thresholdCoords[thresholdIndex];
-                        if(isNumber(lastPathIndex)) {
+                        if(typeof lastPathIndex === "number" && isFinite(lastPathIndex)) {
                             this._lineTo(graphPaths[lastPathIndex], intersectX, intersectY);
                         }
                         this._moveTo(graphPaths[pathIndex], intersectX, intersectY);
@@ -3098,27 +3097,27 @@ Y.Crosshair.prototype = {
             graph,
             i,
             index = Math.floor((x / this.width) * this._xcoords.length),
-            len = series.length;
+            len = series.length,
+            isNumber;
+
         this._yline.set("transform", "translate(" + x + ")");
         if(series) {
             for(i = 0; i < len; i = i + 1) {
                 graph = series[i];
                 y = graph.coords[index];
+                isNumber = typeof y === "number" && isFinite(y);
+
                 if(graph.marker) {
-                    if(Y.Lang.isNumber(y)) {
-                        graph.marker.set("visible", true);
+                    if(isNumber) {
                         graph.marker.set("transform", "translate(" + x + ", " + y + ")");
-                    } else {
-                        graph.marker.set("visible", false);
                     }
+                    graph.marker.set("visible", isNumber);
                 }
                 if(graph.line) {
-                    if(Y.Lang.isNumber(y)) {
-                        graph.xLine.set("visible", true);
+                    if(isNumber) {
                         graph.xLine.set("transform", "translateY(" + y + ")");
-                    } else {
-                        graph.xLine.set("visible", false);
                     }
+                    graph.xLine.set("visible", isNumber);
                 }
             }
         }
@@ -3198,11 +3197,11 @@ Y.Gridlines = Y.Base.create("gridlines", Y.Base, [Y.Renderer], {
      * would result in a solid fill across the area.
      * @protected
      */
-    draw: function()
+    draw: function(w, h, startIndex, interval)
     {
         if(this.get("axis") && this.get("graphic"))
         {
-            this._drawGridlines.apply(this, arguments);
+            this._drawGridlines(w, h, startIndex, interval);
         }
     },
 
@@ -3608,11 +3607,11 @@ Y.GridlinesCanvas = Y.Base.create("gridlinesCanvas", Y.Gridlines, [], {
      * would result in a solid fill across the area.
      * @protected
      */
-    draw: function()
+    draw: function(w, h, startIndex, interval)
     {
         if(this.get("axis"))
         {
-            this._drawGridlines.apply(this, arguments);
+            this._drawGridlines(w, h, startIndex, interval);
         }
     },
 
@@ -3946,7 +3945,7 @@ StockIndicatorsLegend.prototype = {
             this.dateLabelFunction = cfg.dateLabelFunction;
             this.dateLabelFormat = cfg.dateLabelFormat;
             this.dateLabelScope = cfg.dateLabelScope || this;
-            cfg.render.getDOMNode().appendChild(this.contentDiv);
+            cfg.render._node.appendChild(this.contentDiv);
 
             len = seriesQueue.length;
             myul = Y.DOM.create(
@@ -4085,7 +4084,7 @@ StockIndicatorsLegend.prototype = {
                     item.li.style.display = "inline-block";
                     val = dataItem[key];
                     item.value.innerHTML = Y.Number.format(parseFloat(val), this.valueLabelFormat);
-                    Y.DOM.setStyle(item.value, "color", val > 0 ? this.priceUpColor : this.priceDownColor);
+                    item.value.style.color = val > 0 ? this.priceUpColor : this.priceDownColor;
                 } else {
                     item.li.style.display = "none";
                 }
@@ -4279,8 +4278,8 @@ Y.StockIndicatorsAxisLegend.prototype = {
             minLabel = DOCUMENT.createElement("span"),
             height,
             width,
-            minText = this._labelFunction.apply(this, [this._minimum, this._labelFormat]),
-            maxText = this._labelFunction.apply(this, [this._maximum, this._labelFormat]),
+            minText = this._labelFunction(this._minimum, this._labelFormat),
+            maxText = this._labelFunction(this._maximum, this._labelFormat),
             container = DOCUMENT.createElement("div"),
             arrow = DOCUMENT.createElement("span"),
             key,
@@ -4380,7 +4379,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
             arrow = DOCUMENT.createElement("span"),
             label = DOCUMENT.createElement("span"),
             key,
-            text = this._labelFunction.apply(this, [value, this._labelFormat]),
+            text = this._labelFunction(value, this._labelFormat),
             ycoord = previousClose.ycoord ||
                 axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
         ycoord = ycoord + this._y;
@@ -4544,7 +4543,7 @@ Y.StockIndicatorsAxisLegend.prototype = {
                     label.style.background = background;
                     arrow.style.borderRightColor = background;
                 }
-                text = this._labelFunction.apply(this, [value, this._labelFormat]),
+                text = this._labelFunction(value, this._labelFormat),
                 ycoord = this._y + axis._getCoordFromValue(this._minimum, this._maximum, this.height, value, this.height, true);
                 label.appendChild(DOCUMENT.createTextNode(text));
                 container.style.position = "absolute";
@@ -5318,7 +5317,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
      */
     initializer: function() {
         var cb = this.get("contentBox");
-        cb.setStyle("position", "relative");
+        cb._node.style.position = "relative";
         this._axes = [];
         this._graphs = [];
         this._graphics = [];
@@ -5569,7 +5568,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
     startTimeline: function() {
         if(!this._runTimeline) {
             this._runTimeline = true;
-            this._timelineStart = (new Date()).valueOf() - 17;
+            this._timelineStart = +new Date() - 17;
             this.redraw();
         }
     },
@@ -5602,7 +5601,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             chart,
             i,
             len = charts.length,
-            endTime = (new Date()).valueOf();
+            endTime = +new Date();
         if(endTime >= this._timelineStart + 17) {
             for(i = 0; i < len; i = i + 1) {
                 chart = charts[i];
@@ -5615,7 +5614,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                     legend.redraw();
                 }
             }
-            this._timelineStart = (new Date()).valueOf();
+            this._timelineStart = +new Date();
         }
         if(this._runTimeline && !this._autoDraw) {
             this._timelineId = this._onEnterFrame.apply(WINDOW, [function() {
@@ -5678,13 +5677,19 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             valueLen,
             valueKey,
             groupMarkers,
-            nomarkers = ["candlestick", "line", "ohlc", "volumecolumn", "multipleline"];
+            nomarkers = {
+                "candlestick": true,
+                "line": true,
+                "ohlc": true,
+                "volumecolumn": true,
+                "multipleline": true
+            };
         for(indIter = 0; indIter < indLen; indIter = indIter + 1) {
             indicator = indicators[indIter];
             valueKey = indicator.valueKey;
             indicatorType = indicator.type;
             if(indicatorType === "candlestick" || indicatorType === "ohlc" || typeof valueKey === "string") {
-                groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                 seriesConfig = {
                     groupMarkers: groupMarkers,
                     type: indicator.type,
@@ -5701,10 +5706,10 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                         yKey: indicator.valueKey[valueIter]
                     };
                     if(typeof indicatorType === "string") {
-                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType) === -1 && indicator.groupMarkers;
+                        seriesConfig.groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                         seriesConfig.type = indicatorType;
                     } else {
-                        seriesConfig.groupMarkers = Y.Array.indexOf(nomarkers, indicatorType[valueIter]) === -1 && indicator.groupMarkers;
+                        seriesConfig.groupMarkers = !nomarkers[indicatorType] && indicator.groupMarkers;
                         seriesConfig.type = indicatorType[valueIter];
                         if(indicatorType[valueIter] === "multipleline" && config.threshold && config.range === "1d") {
                             seriesConfig.thresholds = [parseFloat(indicator.previousClose)];
@@ -5964,11 +5969,12 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
         numericAxis = new NumericClass(numericConfig);
         dateAxis = new DateClass(dateConfig);
         bb = dateAxis.get("boundingBox");
-        bb.setStyle("left", 0 + "px");
-        bb.setStyle("top", dateConfig.y + "px");
+        bb._node.style.left = 0;
+        bb._node.style.top = dateConfig.y + "px";
+
         bb = numericAxis.get("boundingBox");
-        bb.setStyle("left", numericConfig.x + "px");
-        bb.setStyle("top", numericConfig.y + "px");
+        bb._node.style.left = numericConfig.x + "px";
+        bb._node.style.top = numericConfig.y + "px";
         axes = {
             numeric: numericAxis,
             date: dateAxis
@@ -6146,7 +6152,8 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             key,
             color,
             crosshairKey,
-            validKeys = config.keys;
+            validKeys = Y.Array.hash(config.keys);
+
         for(key in graphs) {
             if(graphs.hasOwnProperty(key)){
                 crosshairKey = key === "quote" ? "close" : key;
@@ -6155,7 +6162,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 if(color && typeof color === "object" && graph.get("type") === "combo") {
                     color = color.line;
                 }
-                if(Y.Array.indexOf(validKeys, crosshairKey) > -1) {
+                if(validKeys[crosshairKey]) {
                     series = {
                         marker: {
                             shape: "circle",
@@ -6360,7 +6367,7 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
             config.legend.width = graphConfig.width;
         }
         legend = this._addLegend(config, cb);
-        if(thresholdStyles && typeof previousClose === "number") {
+        if(thresholdStyles && typeof previousClose === "number" && isFinite(previousClose)) {
             thresholdConfig = {
                 type: "thresholdline",
                 thresholds: [previousClose],
@@ -6500,15 +6507,9 @@ Y.StockIndicatorsChart = Y.Base.create("stockIndicatorsChart",  Y.Widget, [Y.Ren
                 }
             }
         }
-        if(this._startHandle) {
-            this._startHandle.detach();
-        }
-        if(this._moveHandle) {
-            this._moveHandle.detach();
-        }
-        if(this._endHandle) {
-            this._endHandle.detach();
-        }
+        this._startHandle.detach();
+        this._moveHandle.detach();
+        this._endHandle.detach();
     },
 
     destructor: function() {
